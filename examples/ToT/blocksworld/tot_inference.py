@@ -110,7 +110,7 @@ class BlocksWorldModel(WorldModel):
                  base_model: LanguageModel,
                  prompt: dict,
                  max_steps: int = 6,
-                 batch_size=1) -> None:
+                 batch_size=8) -> None:
         super().__init__()
         self.max_steps = max_steps
         self.base_model = base_model
@@ -191,6 +191,7 @@ if __name__ == '__main__':
     import torch
     import torch.backends.cudnn
     from reasoners.lm import LlamaModel, Llama2Model
+    from reasoners.lm import OpenAIModel
     from reasoners.lm.llama_model import DummyLLaMAModel
     np.random.seed(1)
     random.seed(1)
@@ -199,7 +200,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
 
     def main(
-            base_lm: Literal[ 'llama2',' exllama', 'llama3']  = 'exllama',
+            base_lm: Literal[ 'llama2',' exllama', 'llama3', 'openai']  = 'openai',
             model_dir = '/path/to/model',
             llama_size = "7B",
             lora_dir = None,
@@ -213,13 +214,14 @@ if __name__ == '__main__':
             mem_map = None,
             temperature = 0.8,
             search_algo = "beam",
-            batch_size = 8,
+            batch_size = 1,
             **kwargs
             ):
         print(model_dir)
         with open(prompt_path) as f:
             prompt = json.load(f)
-
+        
+        print(batch_size)
         if base_lm in ['llama2', 'llama3']:    
             import torch
             import torch.backends.cudnn
@@ -231,14 +233,18 @@ if __name__ == '__main__':
 
         if base_lm == 'llama2':
             from reasoners.lm import Llama2Model
-            llama_model = Llama2Model(model_dir, llama_size, max_batch_size=batch_size)
+            model = Llama2Model(model_dir, llama_size, max_batch_size=batch_size)
         elif base_lm == 'llama3':
             from reasoners.lm import Llama3Model
-            llama_model = Llama3Model(model_dir, llama_size, max_batch_size=batch_size)
+            model = Llama3Model(model_dir, llama_size, max_batch_size=batch_size)
+        elif base_lm == 'openai':
+            ######## TODO: Code Here  ###########
+            pass
+            #####################################
         else:
             from reasoners.lm import ExLlamaModel  # Maybe other transformer models also support
             device = torch.device("cuda:0")
-            llama_model = ExLlamaModel(model_dir, 
+            model = ExLlamaModel(model_dir, 
                                     lora_dir, 
                                     device=device, 
                                     max_batch_size=1, 
@@ -247,7 +253,7 @@ if __name__ == '__main__':
                                     mem_map=mem_map,
                                     log_output=True)#please set mem_map if you need model parallelism, e.g. mem_map = [16,22] with 2 GPUs
 
-        tot_bw(llama_model,
+        tot_bw(model,
                prompt,
                search_algo=search_algo,
                disable_log=disable_log,

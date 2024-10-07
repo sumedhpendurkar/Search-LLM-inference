@@ -5,6 +5,8 @@ __pycache__/
 *.log
 *.egg-info/
 *.tmp
+*.swp
+*.swo
 .env
 .run/
 logs/
