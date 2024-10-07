@@ -239,7 +239,7 @@ if __name__ == '__main__':
             model = Llama3Model(model_dir, llama_size, max_batch_size=batch_size)
         elif base_lm == 'openai':
             ######## TODO: Code Here  ###########
-            pass
+            model = OpenAIModel(model='gpt-3.5-turbo', temperature=temperature, max_tokens=2048 )
             #####################################
         else:
             from reasoners.lm import ExLlamaModel  # Maybe other transformer models also support
