@@ -106,8 +106,10 @@ class OpenAIModel(LanguageModel):
         raise NotImplementedError("GPTCompletionModel does not support get_next_token_logits")
 
     def get_loglikelihood(self,
-                          prompt: Union[str, list[str]],
-                          **kwargs) -> list[np.ndarray]:
+                          prefix: str,
+                          contents: list[str]) -> list[np.ndarray]:
+        print(prefix)
+        print(contents)
         raise NotImplementedError("GPTCompletionModel does not support get_log_prob")
 
 
