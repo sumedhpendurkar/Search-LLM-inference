@@ -5,6 +5,7 @@ from typing import Optional, Union, Literal
 import time
 
 from .. import LanguageModel, GenerateOutput
+import tiktoken
 from openai import OpenAI
 
 PROMPT_TEMPLATE_ANSWER = "Your response need to be ended with \"So the answer is\"\n\n"
@@ -108,11 +109,35 @@ class OpenAIModel(LanguageModel):
     def get_loglikelihood(self,
                           prefix: str,
                           contents: list[str]) -> list[np.ndarray]:
-        print(prefix)
-        print(contents)
-        raise NotImplementedError("GPTCompletionModel does not support get_log_prob")
+      
+        tokenizer = tiktoken.encoding_for_model('gpt-3.5-turbo')
+        contents_tokens = [tokenizer.encode(content[len(prefix):]) for content in contents]
+        #max_contents_token_len = max([len(tokens) for tokens in contents_token])
+   
+        acc_probs = np.zeros(len(contents), dtype=np.float32)
+
+        for j in range(len(contents_tokens)):
+            for i in range(len(contents_tokens[j])):
+                # i should be max over contents
+                completion = self.client.chat.completions.create(
+                  model=self.model, logprobs=True, top_logprobs=10,
+                  messages=[
+                      {"role": "user", "content": prefix + tokenizer.decode(contents_tokens[j][:i])}
+                  ],
+                  temperature=self.temperature,
+                  max_tokens=1
+                )
+
+                # Extract the response
+                choices = completion.choices[0]
+                logprobs = choices.logprobs.content  # This will contain the top token options for each token
+                    #idx = logprobs[i].top_logprobs.index(contents[j][i])
+                    
+                acc_probs[j] += next(item.logprob for item in logprobs[0].top_logprobs \
+                            if item.token == tokenizer.decode([contents_tokens[j][i]]))
+        return acc_probs
 
 
 if __name__ == '__main__':
     model = OpenAIModel(model='gpt-3.5-turbo')
-    print(model.generate(['Hello, how are you?', 'How to go to Shanghai from Beijing?']))
+    print(model.generate(['Hello, how are you?']))

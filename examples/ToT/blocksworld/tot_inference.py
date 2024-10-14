@@ -239,6 +239,7 @@ if __name__ == '__main__':
             model = Llama3Model(model_dir, llama_size, max_batch_size=batch_size)
         elif base_lm == 'openai':
             ######## TODO: Code Here  ###########
+            #model = OpenAIModel(model='gpt-4o-mini', temperature=temperature, max_tokens=2048 )
             model = OpenAIModel(model='gpt-3.5-turbo', temperature=temperature, max_tokens=2048 )
             #####################################
         else:
