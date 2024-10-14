@@ -110,8 +110,7 @@ class OpenAIModel(LanguageModel):
                           prefix: str,
                           contents: list[str]) -> list[np.ndarray]:
       
-        tokenizer = tiktoken.encoding_for_model(self.model)
-        print([content[len(prefix):] for content in contents])
+        tokenizer = tiktoken.encoding_for_model('gpt-3.5-turbo')
         contents_tokens = [tokenizer.encode(content[len(prefix):]) for content in contents]
         #max_contents_token_len = max([len(tokens) for tokens in contents_token])
         completion = self.client.chat.completions.create(
@@ -136,12 +135,16 @@ class OpenAIModel(LanguageModel):
                 
                 try:
                     acc_probs += next(item.logprob for item in logprobs[i].top_logprobs \
-                            if item.token == contents_tokens[j][i])
+                            if item.token == tokenizer.decode([contents_tokens[j][i]]))
                 except:
-                    print(i, j, contents_tokens[j][i])
-                    print(logprobs[i].top_logprobs)
+                    print(tokenizer.decode([contents_tokens[j][i]]))
+                    print(logprobs[i])
+                    for toki in (logprobs[i].top_logprobs):
+                        print(toki.token)
+                    print(contents[j][len(prefix):])
+                    print("*" * 100)
+                    print(choices.message.content)
                     raise StopIteration
-                logprobs[i].top_logprobs.logprob[i]
         return acc_probs
 
 
