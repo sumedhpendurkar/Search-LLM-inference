@@ -113,38 +113,28 @@ class OpenAIModel(LanguageModel):
         tokenizer = tiktoken.encoding_for_model('gpt-3.5-turbo')
         contents_tokens = [tokenizer.encode(content[len(prefix):]) for content in contents]
         #max_contents_token_len = max([len(tokens) for tokens in contents_token])
-        completion = self.client.chat.completions.create(
-          model=self.model, logprobs=True, top_logprobs=10,
-          messages=[
-            {"role": "user", "content": prefix}
-          ],
-          temperature=self.temperature,
-          max_tokens=self.max_tokens
-        )
-
-        # Extract the response
-        choices = completion.choices[0]
-        logprobs = choices.logprobs.content  # This will contain the top token options for each token
-    
+   
         acc_probs = np.zeros(len(contents), dtype=np.float32)
 
         for j in range(len(contents_tokens)):
-            # i should be max over contents
             for i in range(len(contents_tokens[j])):
-                #idx = logprobs[i].top_logprobs.index(contents[j][i])
-                
-                try:
-                    acc_probs += next(item.logprob for item in logprobs[i].top_logprobs \
+                # i should be max over contents
+                completion = self.client.chat.completions.create(
+                  model=self.model, logprobs=True, top_logprobs=10,
+                  messages=[
+                      {"role": "user", "content": prefix + tokenizer.decode(contents_tokens[j][:i])}
+                  ],
+                  temperature=self.temperature,
+                  max_tokens=1
+                )
+
+                # Extract the response
+                choices = completion.choices[0]
+                logprobs = choices.logprobs.content  # This will contain the top token options for each token
+                    #idx = logprobs[i].top_logprobs.index(contents[j][i])
+                    
+                acc_probs[j] += next(item.logprob for item in logprobs[0].top_logprobs \
                             if item.token == tokenizer.decode([contents_tokens[j][i]]))
-                except:
-                    print(tokenizer.decode([contents_tokens[j][i]]))
-                    print(logprobs[i])
-                    for toki in (logprobs[i].top_logprobs):
-                        print(toki.token)
-                    print(contents[j][len(prefix):])
-                    print("*" * 100)
-                    print(choices.message.content)
-                    raise StopIteration
         return acc_probs
 
 
