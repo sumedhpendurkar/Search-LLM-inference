@@ -12,7 +12,7 @@ import reasoners.benchmark.bw_utils as utils
 from reasoners import LanguageModel, Reasoner, SearchAlgorithm
 from reasoners import WorldModel, LanguageModel, SearchConfig
 from reasoners.benchmark import BWEvaluator
-from reasoners.algorithm import BeamSearch, DFS
+from reasoners.algorithm import BeamSearch, DFS, LTS
 
 def bfs_bw_extractor(algo_output):
     if torch.distributed.is_initialized():
@@ -33,6 +33,17 @@ def dfs_bw_extractor(algo_output):
     except Exception as e:
         print("Error in output extraction,", e)
         return ""
+
+def lts_bw_extractor(algo_output):
+    if torch.distributed.is_initialized():
+        torch.distributed.barrier()
+    # to make sure the plan is saved before evaluation in multi-process setting
+    try:
+        return "\n".join(algo_output.terminal_state.action_history)
+    except Exception as e:
+        print("Error in output extraction,", e)
+        return ""
+
 
 BWAction = str
 class BWState(NamedTuple):
@@ -163,17 +174,24 @@ def tot_bw(base_model: LanguageModel,
         search_algo_params |= {"max_depth": depth_limit}
     elif search_algo == "dfs":
         search_algo_params |= {"depth": depth_limit}
+    elif search_algo == "lts":
+        pass
+        #search_algo_params |= {"depth": depth_limit}
     else:
         print("Unknown search algorithm", search_algo)
         raise NotImplementedError
     world_model = BlocksWorldModel(base_model=base_model, prompt=prompt, max_steps=depth_limit)
     config = BWConfig(base_model=base_model, prompt=prompt, temperature=temperature)
     
-    output_extractor = dfs_bw_extractor if search_algo == "dfs" else bfs_bw_extractor
     if search_algo == "dfs":
+        output_extractor = dfs_bw_extractor
         search_algo = DFS(**search_algo_params)
     elif search_algo == "beam":
+        output_extractor = bfs_bw_extractor
         search_algo = BeamSearch(**search_algo_params)
+    elif search_algo == "lts":
+        output_extractor = lts_bw_extractor
+        search_algo = LTS(**search_algo_params)
     else:
         raise NotImplementedError
     reasoner = Reasoner(world_model=world_model, search_config=config, search_algo=search_algo)

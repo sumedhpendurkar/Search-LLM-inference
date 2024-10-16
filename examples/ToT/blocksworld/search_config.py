@@ -24,6 +24,14 @@ class BWConfig(SearchConfig):
     def get_actions(self, state: BWState) -> list[BWAction]:
         blocks_state = state.blocks_state
         return utils.generate_all_actions(blocks_state)
+    
+    def get_pi(self, state:BWState, actions: list[BWAction]):
+        """
+        TODO: log prob to prob conversion
+        """
+        probs = self.base_model.get_loglikelihood(inputs, [inputs + action for action in actions])
+        print(probs)
+        return probs
 
     def fast_reward(self, state: BWState, action: BWAction) -> tuple[float, dict]:
         if state.buffered_action == "":
