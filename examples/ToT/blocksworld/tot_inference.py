@@ -55,6 +55,16 @@ class BWState(NamedTuple):
     action_history: list[str]
     end: bool
 
+    def __hash__(self):
+        return hash((self.step_idx, tuple(self.action_history), self.end))
+
+    # Implementing __eq__ for object comparison
+    def __eq__(self, other):
+        if not isinstance(other, BWState):
+            return False
+        return (self.step_idx == other.step_idx and
+                tuple(self.action_history) == tuple(other.action_history) and
+                self.end == other.end)
 
 class BWConfig(SearchConfig):
     def __init__(self,
@@ -86,6 +96,20 @@ class BWConfig(SearchConfig):
         outputs = list(dict.fromkeys(outputs))
         return outputs
 
+    def get_pi(self, state:BWState, actions: list[BWAction]):
+        """
+        TODO: log prob to prob conversion
+        """
+        inputs = self.prompt["icl"].replace("<action>", "\n".join(state.action_history + [""])) \
+            .replace("<init_state>", utils.extract_init_state(self.example)) \
+            .replace("<goals>", utils.extract_goals(self.example, return_raw=True))[:-1]
+        
+        log_probs = self.base_model.get_loglikelihood(inputs, [inputs + action for action in actions])
+         
+        probs = np.exp(log_probs)
+        print(actions)
+        print(probs)
+        return probs
 
     def fast_reward(self, state: BWState, action: BWAction) -> tuple[float, dict]:
         inputs = self.prompt["icl"].replace("<action>", "\n".join(state.action_history + [""])) \

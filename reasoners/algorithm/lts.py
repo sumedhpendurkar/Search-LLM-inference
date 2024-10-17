@@ -1,5 +1,7 @@
 import heapq
-from typing import List, Optional, Tuple, NamedTuple
+from .. import SearchAlgorithm, WorldModel, Reasoner, SearchConfig, State, Action
+from typing import List, Optional, Tuple, NamedTuple, Generic
+import itertools
 
 class LTSNode:
     id_iter = itertools.count()
@@ -22,9 +24,9 @@ class LTSNode:
         self.pi = 1
         if parent:
             self.g = self.parent.g + 1     #cost from start to this node
-            self.pi = self.parent.pi 
+            self.pi = self.parent.pi
         self.pi *= pi  # heuristic estimate
-        self.f = self.g / self.pi 
+        self.f = self.g / self.pi
         self.is_terminal = is_terminal
 
     def add_child(self, child: 'LTSNode'):
@@ -50,11 +52,11 @@ class LTSResult(NamedTuple):
 class LTS(SearchAlgorithm, Generic[State, Action]):
     """ LTS Search Algorithm """
 
-    def __init__(self, total_states: int = 100):
+    def __init__(self, total_states: int=100, max_per_state: int=10, max_terminal_nodes: int=10):
         self.total_states = total_states
         self.terminals = []
         self.stat_cnt = 0
-        self.max_per_state = max_per_state  ## TODO: Redundant as of now
+        self.max_per_state = max_per_state
         self.max_terminal_nodes = max_terminal_nodes ## TODO: Redundant as of now
     
     def _reset(self):
@@ -105,7 +107,7 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
             if len(new_actions) > self.max_per_state:
                 new_actions = new_actions[:self.max_per_state]
 
-            pis = config.get_pi(new_state, new_actions)  #Save computational cost
+            pis = config.get_pi(cur_node.state, new_actions)  #Save computational cost
              # Explore each action
             for itr, action in enumerate(new_actions):
                 # Generate the next state
@@ -117,7 +119,7 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
                     continue
 
                 # Compute costs
-                pi = pis[itr] #TODO: fix
+                pi = pis[itr]
 
                 # Create a new node for the new state
                 new_node = LTSNode(
@@ -135,9 +137,13 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
 
             # Increment the state count
             self.stat_cnt += 1
-
-        # If terminal states are found, return the best one based on f
+        
+        #DEBUG
+        if self.stat_cnt == self.total_states:
+            print("Max States reached")
+        # If terminal states are found, return the best one based on reward 
         if self.terminals:
+            print("LTS found goal nodes in", self.stat_cnt, "states")
             best_terminal = min(self.terminals, key=lambda x: x.f) #TODO: return based on true rewards
             result = LTSResult(
                 terminal_state=best_terminal.state, 
@@ -146,7 +152,6 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
                 terminal_nodes=self.terminals
             )
             return result
-        else:
-            return None  # No terminal state found
+        return None  # No terminal state found
 
 

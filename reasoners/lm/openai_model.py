@@ -131,8 +131,6 @@ class OpenAIModel(LanguageModel):
                 # Extract the response
                 choices = completion.choices[0]
                 logprobs = choices.logprobs.content  # This will contain the top token options for each token
-                    #idx = logprobs[i].top_logprobs.index(contents[j][i])
-                    
                 acc_probs[j] += next(item.logprob for item in logprobs[0].top_logprobs \
                             if item.token == tokenizer.decode([contents_tokens[j][i]]))
         return acc_probs
