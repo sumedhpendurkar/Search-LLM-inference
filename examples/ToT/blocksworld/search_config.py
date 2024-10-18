@@ -24,6 +24,29 @@ class BWConfig(SearchConfig):
     def get_actions(self, state: BWState) -> list[BWAction]:
         blocks_state = state.blocks_state
         return utils.generate_all_actions(blocks_state)
+    
+    def get_pi(self, state:BWState, actions: list[BWAction]):
+        """
+        TODO: log prob to prob conversion
+        """
+        if state.buffered_action == "":
+            # if no action buffered
+            current_blocks_state = state.blocks_state
+        else:
+            # if action buffered
+            current_blocks_state = state.last_blocks_state
+        previous_action = state.buffered_action + "\n" if state.buffered_action != "" else ""
+        
+        icl_template = self.prompt["icl_list"][state.step_idx // 2]
+        # every two step, we will deduct the icl prompt
+        # so that the distribution of step length is more reasonable
+        
+        inputs = icl_template.replace("<init_state>", current_blocks_state)\
+            .replace("<goals>", utils.extract_goals(self.example, return_raw=True)).replace("<action>", previous_action)
+
+        log_probs = self.base_model.get_loglikelihood(inputs, [inputs + action for action in actions])
+        probs = np.exp(log_probs) 
+        return probs
 
     def fast_reward(self, state: BWState, action: BWAction) -> tuple[float, dict]:
         if state.buffered_action == "":

@@ -58,7 +58,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
                  temperature_decay: Optional[float] = None, reject_sample: Optional[bool] = None,
                  reject_min_reward: Optional[float] = None, unbiased: Optional[bool] = None,
                  reward_aggregator: Union[Callable[[List[Any]], float], str] = 'last', action_dedup: bool = False,
-                 early_terminate: bool = True, return_beam: bool = False, **kwargs) -> None:
+                 early_terminate: bool = True, return_beam: bool = False, total_states:int = 100, **kwargs) -> None:
         # Initialize the BeamSearch class
         super().__init__(**kwargs)
         self.beam_size = beam_size
@@ -74,6 +74,9 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
         self.action_dedup = action_dedup
         self.early_terminate = early_terminate
         self.return_beam = return_beam
+        self.total_states = total_states
+        self.stat_cnt = 0
+        self.anytime = False
 
         # Initializing the reward_aggregator based on the provided argument
         self._initialize_reward_aggregator()
@@ -203,6 +206,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
         root_node = BeamSearchNode(state=init_state, action=None, reward=0.0)
         # Initialize current beam with initial state
         cur_beam = [(root_node, [], 0.0)]  # (node, reward_list, cum_reward)
+        self.stat_cnt = 0
         terminal_beam = []
 
         for depth in range(self.max_depth + 1):
@@ -210,13 +214,23 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
             new_beam = []
             cache_for_dedup = set()
 
+            if self.stat_cnt > self.total_states:
+                break
+            if terminal_beam != [] and not self.anytime:
+                break
+
             for beam_item in cur_beam:
+                if self.stat_cnt > self.total_states:
+                    break
+                if terminal_beam != [] and not self.anytime:
+                    break
                 node, reward_list, _ = beam_item[:3]
+                self.stat_cnt += 1
 
                 state = node.state
                 if self.early_terminate and world.is_terminal(state):
                     terminal_beam.append(beam_item)
-                    
+                 
                 else:
                     
                     if depth == self.max_depth:
@@ -290,6 +304,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
         # Sort terminal beam by reward
         terminal_beam.sort(key=lambda x: x[2], reverse=True)
 
+        print("Beam Search found goal nodes in", self.stat_cnt, "states\t", "num solutions:", len(terminal_beam))
         if self.return_beam:
             # convert terminal_beam to a list of BeamSearchResult
             terminal_beam = [BeamSearchResult(
