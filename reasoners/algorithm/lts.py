@@ -19,7 +19,7 @@ class LTSNode:
         self.action = action
         self.parent = parent
         self.children: 'Optional[list[LTSNode]]' = []
-        
+     
         self.g = 0
         self.pi = 1
         if parent:
@@ -58,7 +58,8 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
         self.stat_cnt = 0
         self.max_per_state = max_per_state
         self.max_terminal_nodes = max_terminal_nodes ## TODO: Redundant as of now
-    
+        self.anytime = False
+
     def _reset(self):
         self.terminals = []
         self.stat_cnt = 0
@@ -92,7 +93,7 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
             cur_node = heapq.heappop(open_set)
 
             # If the current node represents a terminal state, return the result
-            if world.is_terminal(cur_node.state):
+            if world.is_terminal(cur_node.state) and not self.anytime:
                 self.terminals.append(cur_node) #TODO: Wait until max_terminals?
                 break
             
