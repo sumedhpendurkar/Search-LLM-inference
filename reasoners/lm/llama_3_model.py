@@ -63,16 +63,14 @@ class Llama3Model(LanguageModel):
                 model_parallel_size = int(os.environ.get("WORLD_SIZE", 1))
             initialize_model_parallel(model_parallel_size)
 
-        #local_rank = int(os.environ.get("LOCAL_RANK", 0))
-        #torch.cuda.set_device(local_rank)
+        local_rank = int(os.environ.get("LOCAL_RANK", 0))
+        torch.cuda.set_device(local_rank)
 
         # seed must be the same in all processes
         torch.manual_seed(seed)
         
-        """
         if local_rank > 0:
             sys.stdout = open(os.devnull, "w")
-        """
         
         start_time = time.time()
         checkpoints = sorted(Path(ckpt_dir).glob("*.pth"))
@@ -105,9 +103,14 @@ class Llama3Model(LanguageModel):
     def __init__(self, path, size, max_batch_size=1, max_seq_len=2048, **kwargs):
         super().__init__()
         print(path, size, max_batch_size, max_seq_len)
+    
+        if size == "3B" or size == "1B":
+            base_llama = 'Meta-Llama-3.2'
+        else:
+            base_llama = 'Meta-Llama-3'
         self.model, self.tokenizer = self.build(
-            os.path.join(path, f"Meta-Llama-3-{size.upper()}"),
-            os.path.join(path, f"Meta-Llama-3-{size.upper()}", "tokenizer.model"),
+            os.path.join(path, f"{base_llama}-{size.upper()}"),
+            os.path.join(path, f"{base_llama}-{size.upper()}", "tokenizer.model"),
             max_seq_len=max_seq_len,
             max_batch_size=max_batch_size,
             **kwargs)
@@ -356,10 +359,10 @@ def sample_top_pk(probs, p, k):
     return next_token
 
 if __name__ == "__main__":
-    llama3_ckpts = "/data/shibo/llama3-ckpts"
-    llama_model = Llama3Model(llama3_ckpts, "8B", max_batch_size=3)
+    llama3_ckpts = "/home/sumedh/meta-llama"
+    llama_model = Llama3Model(llama3_ckpts, "1B", max_batch_size=3)
     print(llama_model.generate(["Do you love", "The capital of France is"], eos_token_id=[13], output_log_probs=True)) 
     print(llama_model.get_next_token_logits(["The capital of UK is", "The capital of France is", "The capital of Russia is"], ["Paris", "London", "Moscow"]))
-    print(llama_model.get_loglikelihood("The capital of UK is", ["The capital of UK is Paris", "The capital of UK is London", "The capital of UK is Moscow"]))
+    print(np.exp(llama_model.get_loglikelihood("The capital of UK is", ["The capital of UK is Paris", "The capital of UK is London", "The capital of UK is Moscow"])))
 
     # CUDA_VISIBLE_DEVICES=0 torchrun --nproc_per_node 1 reasoners/lm/llama_3_model.py

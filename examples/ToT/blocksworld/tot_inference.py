@@ -256,7 +256,7 @@ if __name__ == '__main__':
             mem_map = None,
             temperature = 0.8,
             search_algo = "beam",
-            batch_size = 1,
+            batch_size = 4,
             **kwargs
             ):
         print(model_dir)
@@ -276,7 +276,7 @@ if __name__ == '__main__':
         if base_lm == 'llama2':
             from reasoners.lm import Llama2Model
             model = Llama2Model(model_dir, llama_size, max_batch_size=batch_size)
-        elif base_lm == 'llama3':
+        elif base_lm == 'llama3' or base_lm == 'llama3.2':
             from reasoners.lm import Llama3Model
             model = Llama3Model(model_dir, llama_size, max_batch_size=batch_size)
         elif base_lm == 'openai':
