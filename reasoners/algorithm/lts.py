@@ -19,6 +19,7 @@ class LTSNode:
         self.action = action
         self.parent = parent
         self.children: 'Optional[list[LTSNode]]' = []
+        self.cum_rewards = []
      
         self.g = 0
         self.pi = 1
@@ -58,7 +59,7 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
         self.stat_cnt = 0
         self.max_per_state = max_per_state
         self.max_terminal_nodes = max_terminal_nodes ## TODO: Redundant as of now
-        self.anytime = False
+        self.anytime = True 
 
     def _reset(self):
         self.terminals = []
@@ -93,10 +94,16 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
             cur_node = heapq.heappop(open_set)
 
             # If the current node represents a terminal state, return the result
-            if world.is_terminal(cur_node.state) and not self.anytime:
+            if world.is_terminal(cur_node.state):
                 self.terminals.append(cur_node) #TODO: Wait until max_terminals?
-                break
             
+            if len(self.terminals) == 1 and not self.anytime:
+                break
+           
+            # -- removed -- no condition on terminal nodes for now
+            # if len(self.terminals) == self.max_terminal_nodes and self.anytime:
+            #    break
+
             # Mark the current state as visited
             visited.add(cur_node.state)
 
@@ -130,7 +137,11 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
                     pi=pi, 
                     is_terminal=world.is_terminal(new_state)
                 )
-                
+                fast_reward, fast_reward_details = config.fast_reward(cur_node.state, action)
+                reward, reward_details = config.reward(cur_node.state, action, **fast_reward_details) 
+                new_node.cum_rewards = cur_node.cum_rewards + [reward]
+
+
                 # Add the new node to the priority queue
                 heapq.heappush(open_set, new_node)
 
@@ -145,13 +156,13 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
         # If terminal states are found, return the best one based on reward 
         if self.terminals:
             print("LTS found goal nodes in", self.stat_cnt, "states")
-            best_terminal = min(self.terminals, key=lambda x: x.f) #TODO: return based on true rewards
+            print("Num Terminals:", len(self.terminals))
+            best_terminal = max(self.terminals, key=lambda x: sum(x.cum_rewards))
             result = LTSResult(
-                terminal_state=best_terminal.state, 
-                cum_rewards=best_terminal.g,  # Use g_cost as cumulative reward
-                tree_state=init_node, 
-                terminal_nodes=self.terminals
-            )
+                terminal_state=best_terminal.state,
+                cum_rewards=sum(best_terminal.cum_rewards),
+                tree_state=init_node,
+                terminal_nodes=self.terminals) 
             return result
         return None  # No terminal state found
 

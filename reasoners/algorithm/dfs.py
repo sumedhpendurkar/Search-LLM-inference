@@ -70,7 +70,7 @@ class DFS(SearchAlgorithm, Generic[State, Action]):
         self.stat_cnt = 0
         self.prior = prior # use fast_reward as prior score
         self.max_terminal_nodes = max_terminal_nodes
-        self.anytime = False
+        self.anytime = True 
 
     def _reset(self):
         self.terminals = []
@@ -95,9 +95,9 @@ class DFS(SearchAlgorithm, Generic[State, Action]):
         if not self.anytime and len(self.terminals) > 0:
             return
 
-        # Stop if max_terminal_nodes is reached
-        if self.anytime and len(self.terminals) >= self.max_terminal_nodes:
-            return
+        # Stop if max_terminal_nodes is reached -- removed!
+        #if self.anytime and len(self.terminals) >= self.max_terminal_nodes:
+        #    return
  
         ## if it's terminal state
         if world.is_terminal(cur_node.state) or cur_node.depth == self.depth:

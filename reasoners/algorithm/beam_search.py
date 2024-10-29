@@ -76,7 +76,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
         self.return_beam = return_beam
         self.total_states = total_states
         self.stat_cnt = 0
-        self.anytime = False
+        self.anytime = True 
 
         # Initializing the reward_aggregator based on the provided argument
         self._initialize_reward_aggregator()
@@ -214,25 +214,27 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
             new_beam = []
             cache_for_dedup = set()
 
-            if self.stat_cnt > self.total_states:
+            if self.stat_cnt == self.total_states:
                 break
-            if terminal_beam != [] and not self.anytime:
+
+            if len(terminal_beam) > 0 and not self.anytime:
                 break
 
             for beam_item in cur_beam:
-                if self.stat_cnt > self.total_states:
+                if self.stat_cnt == self.total_states:
                     break
-                if terminal_beam != [] and not self.anytime:
+                if len(terminal_beam) > 0 and not self.anytime:
                     break
+
                 node, reward_list, _ = beam_item[:3]
                 self.stat_cnt += 1
 
                 state = node.state
                 if self.early_terminate and world.is_terminal(state):
                     terminal_beam.append(beam_item)
-                 
+
                 else:
-                    
+
                     if depth == self.max_depth:
                         terminal_beam.append(beam_item)
                         continue
@@ -304,7 +306,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
         # Sort terminal beam by reward
         terminal_beam.sort(key=lambda x: x[2], reverse=True)
 
-        print("Beam Search found goal nodes in", self.stat_cnt, "states\t", "num solutions:", len(terminal_beam))
+        print("Beam Search found goal nodes in", self.stat_cnt, '/', self.total_states, "states\t", "num solutions:", len(terminal_beam))
         if self.return_beam:
             # convert terminal_beam to a list of BeamSearchResult
             terminal_beam = [BeamSearchResult(
@@ -316,7 +318,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
                                 ) for item in terminal_beam]
 
             return terminal_beam
-        
+
         if len(terminal_beam) == 0:
             return BeamSearchResult(
                 terminal_state=None,
@@ -325,7 +327,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
                 trace=[],
                 tree=root_node
             )
-        
+
         best_result = terminal_beam[0]
 
         result = BeamSearchResult(
