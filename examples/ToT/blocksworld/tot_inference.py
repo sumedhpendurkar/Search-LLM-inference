@@ -94,6 +94,9 @@ class BWConfig(SearchConfig):
         outputs = [output.split("\n")[0] for output in ouputs]
         # deduplicate
         outputs = list(dict.fromkeys(outputs))
+        if '' in outputs:
+            outputs.remove('')
+            outputs.append('[PLAN END]')
         return outputs
 
     def get_pi(self, state:BWState, actions: list[BWAction]):

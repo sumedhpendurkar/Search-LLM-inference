@@ -76,7 +76,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
         self.return_beam = return_beam
         self.total_states = total_states
         self.stat_cnt = 0
-        self.anytime = True 
+        self.anytime = True
 
         # Initializing the reward_aggregator based on the provided argument
         self._initialize_reward_aggregator()
@@ -287,7 +287,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
                             new_beam.append((new_node, new_reward_list, new_reward, (acc_action_prob, cur_action_prob)))
                         else:
                             new_beam.append((new_node, new_reward_list, new_reward))
-
+            
             # Sort new beam by reward
             # print(new_beam)
             new_beam.sort(key=lambda x: x[2], reverse=True)
