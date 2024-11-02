@@ -2,6 +2,7 @@ import heapq
 from .. import SearchAlgorithm, WorldModel, Reasoner, SearchConfig, State, Action
 from typing import List, Optional, Tuple, NamedTuple, Generic
 import itertools
+EPSILON=1e-14
 
 class LTSNode:
     id_iter = itertools.count()
@@ -27,7 +28,7 @@ class LTSNode:
             self.g = self.parent.g + 1     #cost from start to this node
             self.pi = self.parent.pi
         self.pi *= pi  # heuristic estimate
-        self.f = self.g / self.pi
+        self.f = self.g / (self.pi + EPSILON) #for stability
         self.is_terminal = is_terminal
 
     def add_child(self, child: 'LTSNode'):
