@@ -105,10 +105,10 @@ class BWConfig(SearchConfig):
         """
         inputs = self.prompt["icl"].replace("<action>", "\n".join(state.action_history + [""])) \
             .replace("<init_state>", utils.extract_init_state(self.example)) \
-            .replace("<goals>", utils.extract_goals(self.example, return_raw=True))[:-1]
+            .replace("<goals>", utils.extract_goals(self.example, return_raw=True))
         
         log_probs = self.base_model.get_loglikelihood(inputs, [inputs + action for action in actions])
-         
+        
         probs = np.exp(log_probs)
         print(actions)
         print(probs)
