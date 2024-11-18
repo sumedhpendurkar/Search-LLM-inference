@@ -15,7 +15,7 @@ import prompts.valid_tot
 import numpy as np
 import random
 from reasoners import WorldModel, SearchConfig
-from reasoners.algorithm import MCTS, BeamSearch, DFS
+from reasoners.algorithm import BeamSearch, DFS, LTS, MCTS
 from reasoners.benchmark import ProntoQAEvaluatorFinal
 
 ProntoQAState = list[str]
@@ -108,9 +108,9 @@ class ProntoQAToTSearchConfig(SearchConfig[ProntoQAState, ProntoQAAction, Pronto
 
 def main(
            model_dir: str,
-           base_lm: Literal[ 'llama2',' exllama', 'llama3']  = 'exllama',
+           base_lm: Literal[ 'llama2',' exllama', 'llama3', 'openai']  = 'exllama',
            llama_size = "7B",
-           batch_size = 4,
+           batch_size = 5,
            search_algo: str = "beam",
            resume: int = 0,
            depth_limit: int = 6,
@@ -128,7 +128,7 @@ def main(
         raise NotImplementedError
     
 
-    def bfs_pronto_extractor(algo_output):
+    def extractor(algo_output):
         if torch.distributed.is_initialized():
             torch.distributed.barrier()
         # to make sure the plan is saved before evaluation in multi-process setting
@@ -141,19 +141,6 @@ def main(
             print("Error in output extraction,", e)
             return ""
     
-    def dfs_bw_extractor(algo_output):
-        if torch.distributed.is_initialized():
-            torch.distributed.barrier()
-        # to make sure the plan is saved before evaluation in multi-process setting
-        try:
-            answer = "\n".join(algo_output.terminal_state[2::2])
-            answer = answer.replace("So ", "")
-            return answer
-
-        except Exception as e:
-            print("Error in output extraction,", e)
-            return ""
-
     if base_lm in ['llama2', 'llama3']:    
         import torch
         import torch.backends.cudnn
@@ -165,13 +152,16 @@ def main(
 
     if base_lm == 'llama2':
         from reasoners.lm import Llama2Model
-        base_model = Llama2Model(model_dir, llama_size, max_batch_size=batch_size)
-    elif base_lm == 'llama3':
+        model = Llama2Model(model_dir, llama_size, max_batch_size=batch_size)
+    elif base_lm == 'llama3' or base_lm == "llama3.2":
         from reasoners.lm import Llama3Model
-        base_model = Llama3Model(model_dir, llama_size, max_batch_size=batch_size)
+        model = Llama3Model(model_dir, llama_size, max_batch_size=batch_size)
+    elif base_lm == 'openai':
+        from reasoners.lm import OpenAIModel
+        model = OpenAIModel(model='gpt-3.5-turbo', temperature=temperature, max_tokens=2048 )
     else:
         from reasoners.lm import ExLlamaModel  # Maybe other transformer models also support
-        base_model = ExLlamaModel(model_dir, 
+        model = ExLlamaModel(model_dir, 
                                 lora_dir=None, 
                                 device=torch.device("cuda:0"), 
                                 max_batch_size=1, 
@@ -180,13 +170,15 @@ def main(
                                 mem_map=mem_map)
 
     world_model = ProntoQAToTWorldModel()
-    search_config = ProntoQAToTSearchConfig(base_model=base_model, temperature=temperature)
+    search_config = ProntoQAToTSearchConfig(base_model=model, temperature=temperature)
     
-    output_extractor = dfs_bw_extractor if search_algo == "dfs" else bfs_pronto_extractor
+    output_extractor = extractor
     if search_algo == "dfs":
         search_algo = DFS(**search_algo_params)
     elif search_algo == "beam":
         search_algo = BeamSearch(**search_algo_params)
+    elif search_algo == "lts":
+        search_algo = LTS(**search_algo_params)
     else:
         raise NotImplementedError
    
