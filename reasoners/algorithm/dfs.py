@@ -107,6 +107,7 @@ class DFS(SearchAlgorithm, Generic[State, Action]):
         cur_state = cur_node.state
         # get candidate actions (list, (action, score) or action)
         new_actions = config.get_actions(cur_state)
+        print(new_actions) 
         if len(new_actions) == 0: 
             print('terminal return: no new action')
             return 

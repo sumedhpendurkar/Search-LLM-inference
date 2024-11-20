@@ -96,7 +96,6 @@ class BWConfig(SearchConfig):
         outputs = list(dict.fromkeys(outputs))
         if '' in outputs:
             outputs.remove('')
-            outputs.append('[PLAN END]')
         return outputs
 
     def get_pi(self, state:BWState, actions: list[BWAction]):
@@ -170,7 +169,7 @@ class BlocksWorldModel(WorldModel):
         :return: the next state and additional information cached for reward calculation
         """
         state = copy.deepcopy(state)
-        if action != "[PLAN END]":
+        if action != "[PLAN END]" and action != '':
             state = BWState(step_idx=state.step_idx + 1, action_history=state.action_history + [action], end=False)
         else:
             state = BWState(step_idx=state.step_idx + 1, action_history=state.action_history, end=True)
