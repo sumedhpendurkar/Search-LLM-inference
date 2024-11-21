@@ -60,7 +60,7 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
         self.stat_cnt = 0
         self.max_per_state = max_per_state
         self.max_terminal_nodes = max_terminal_nodes ## TODO: Redundant as of now
-        self.anytime = True 
+        self.anytime = False 
 
     def _reset(self):
         self.terminals = []

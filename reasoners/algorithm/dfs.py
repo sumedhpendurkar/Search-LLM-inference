@@ -70,7 +70,7 @@ class DFS(SearchAlgorithm, Generic[State, Action]):
         self.stat_cnt = 0
         self.prior = prior # use fast_reward as prior score
         self.max_terminal_nodes = max_terminal_nodes
-        self.anytime = True 
+        self.anytime = False 
 
     def _reset(self):
         self.terminals = []
@@ -86,7 +86,11 @@ class DFS(SearchAlgorithm, Generic[State, Action]):
         self.dfs(world, config, init_node)
         sorted_terminals = sorted(self.terminals, key=lambda x: sum(x.cum_rewards), reverse=True)
         print("DFS found goal nodes in", self.stat_cnt, "states\t", "num solutions:", len(sorted_terminals))
-        result = DFSResult(terminal_state=sorted_terminals[0].state, cum_rewards=sorted_terminals[0].cum_rewards, tree_state=init_node, terminal_nodes=sorted_terminals)
+        if len(sorted_terminals) > 0:
+            result = DFSResult(terminal_state=sorted_terminals[0].state, cum_rewards=sorted_terminals[0].cum_rewards, tree_state=init_node, terminal_nodes=sorted_terminals)
+        else:
+            # No result!
+            result = DFSResult(terminal_state=None, cum_rewards=0, tree_state=init_node, terminal_nodes=sorted_terminals)
         return result
 
     def dfs(self, world: WorldModel, config: SearchConfig, cur_node: DFSNode):
