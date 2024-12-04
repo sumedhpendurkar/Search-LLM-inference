@@ -58,23 +58,23 @@ class DFS(SearchAlgorithm, Generic[State, Action]):
     """
 
     def __init__(self, 
-                 total_states: int = 100, 
+                 total_calls: int = 100,  #max LLM calls
                  max_per_state: int = 3, 
                  depth: int = 10,
                  prior: bool = True,
                  max_terminal_nodes: int = 10):
         self.max_per_state = max_per_state
         self.depth = depth # not used
-        self.total_states = total_states
+        self.total_calls = total_calls
         self.terminals = [] ## final results 
-        self.stat_cnt = 0
+        self.call_cnt = 0
         self.prior = prior # use fast_reward as prior score
         self.max_terminal_nodes = max_terminal_nodes
         self.anytime = False 
 
     def _reset(self):
         self.terminals = []
-        self.stat_cnt = 0
+        self.call_cnt = 0
 
     def __call__(self, world: WorldModel, config: SearchConfig):
         # reset id
@@ -85,7 +85,7 @@ class DFS(SearchAlgorithm, Generic[State, Action]):
         init_node = DFSNode(state=init_state, action=None, parent=None, fast_reward=0., fast_reward_details=None, is_terminal=False)
         self.dfs(world, config, init_node)
         sorted_terminals = sorted(self.terminals, key=lambda x: sum(x.cum_rewards), reverse=True)
-        print("DFS found goal nodes in", self.stat_cnt, "states\t", "num solutions:", len(sorted_terminals))
+        print("DFS found goal nodes in", self.call_cnt, "LLM calls\t", "num solutions:", len(sorted_terminals))
         if len(sorted_terminals) > 0:
             result = DFSResult(terminal_state=sorted_terminals[0].state, cum_rewards=sorted_terminals[0].cum_rewards, tree_state=init_node, terminal_nodes=sorted_terminals)
         else:
@@ -110,15 +110,24 @@ class DFS(SearchAlgorithm, Generic[State, Action]):
 
         cur_state = cur_node.state
         # get candidate actions (list, (action, score) or action)
-        new_actions = config.get_actions(cur_state)
-        print(new_actions) 
-        if len(new_actions) == 0: 
-            print('terminal return: no new action')
-            return 
+        new_actions = config.get_actions(cur_state)[:self.max_per_state]
         ## sort possible actions by score
+        if self.prior:
+            max_num_new_actions = min(len(new_actions) * 2, self.total_calls - self.call_cnt) // 2
+        else:
+            max_num_new_actions = min(len(new_actions), self.total_calls - self.call_cnt)
+        new_actions = new_actions[:max_num_new_actions]
+        self.call_cnt += len(new_actions)
+        print(new_actions)
+
+        if len(new_actions) == 0:
+            print('terminal return: no new action')
+            return
+        
         if self.prior:
             actions_with_prior = [(a, config.fast_reward(cur_state, a)) for a in new_actions]
             new_actions = sorted(actions_with_prior, key=lambda x: x[1][0], reverse=True)
+            self.call_cnt += len(new_actions)
         else:
             new_actions = [(a, (0, {})) for a in new_actions]
         # try each candidate
@@ -126,12 +135,11 @@ class DFS(SearchAlgorithm, Generic[State, Action]):
         for action in new_actions:
             action, (fast_reward, fast_reward_details) = action
             new_state = world.step(cur_state, action)
-            if self.stat_cnt < self.total_states:
+            if self.call_cnt < self.total_calls:
                 cnt_per_state += 1
                 if cnt_per_state > self.max_per_state: 
                     print(f'reach max_per_state {self.max_per_state}: break')
                     break
-                self.stat_cnt += 1
 
                 new_state, aux = world.step(cur_state, action)
 

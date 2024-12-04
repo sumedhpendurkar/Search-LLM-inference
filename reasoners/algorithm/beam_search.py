@@ -58,7 +58,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
                  temperature_decay: Optional[float] = None, reject_sample: Optional[bool] = None,
                  reject_min_reward: Optional[float] = None, unbiased: Optional[bool] = None,
                  reward_aggregator: Union[Callable[[List[Any]], float], str] = 'last', action_dedup: bool = False,
-                 early_terminate: bool = True, return_beam: bool = False, total_states:int = 100, **kwargs) -> None:
+                 early_terminate: bool = True, return_beam: bool = False, total_calls:int = 100, **kwargs) -> None:
         # Initialize the BeamSearch class
         super().__init__(**kwargs)
         self.beam_size = beam_size
@@ -74,8 +74,8 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
         self.action_dedup = action_dedup
         self.early_terminate = early_terminate
         self.return_beam = return_beam
-        self.total_states = total_states
-        self.stat_cnt = 0
+        self.total_calls = total_calls
+        self.call_cnt = 0
         self.anytime = True
 
         # Initializing the reward_aggregator based on the provided argument
@@ -206,7 +206,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
         root_node = BeamSearchNode(state=init_state, action=None, reward=0.0)
         # Initialize current beam with initial state
         cur_beam = [(root_node, [], 0.0)]  # (node, reward_list, cum_reward)
-        self.stat_cnt = 0
+        self.call_cnt = 0
         terminal_beam = []
 
         for depth in range(self.max_depth + 1):
@@ -214,20 +214,19 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
             new_beam = []
             cache_for_dedup = set()
 
-            if self.stat_cnt == self.total_states:
+            if self.call_cnt == self.total_calls:
                 break
 
             if len(terminal_beam) > 0 and not self.anytime:
                 break
 
             for beam_item in cur_beam:
-                if self.stat_cnt == self.total_states:
+                if self.call_cnt == self.total_calls:
                     break
                 if len(terminal_beam) > 0 and not self.anytime:
                     break
 
                 node, reward_list, _ = beam_item[:3]
-                self.stat_cnt += 1
 
                 state = node.state
                 if self.early_terminate and world.is_terminal(state):
@@ -245,6 +244,12 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
                         cache_for_dedup.update(actions)
 
                     actions = config.get_actions(state)
+                    if self.unbiased and self.sampling_strategy == 'stochastic':
+                        max_num_actions = min(len(actions), self.total_calls - self.call_cnt)
+                    else:
+                        max_num_actions = min(len(actions) * 2, self.total_calls - self.call_cnt) // 2
+                    actions = actions[:max_num_actions]
+                    self.call_cnt += len(actions)
 
                     for action in actions:
                         next_state, aux = world.step(state, action)
@@ -265,6 +270,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
                         else:
                             fast_reward, fast_reward_aux = config.fast_reward(state, action)
                             reward = config.reward(state, action, **aux, **fast_reward_aux)
+                            self.call_cnt += 1
 
                             # if the reward is a tuple, then it is (reward, aux)
                             if isinstance(reward, tuple):
@@ -306,7 +312,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
         # Sort terminal beam by reward
         terminal_beam.sort(key=lambda x: x[2], reverse=True)
 
-        print("Beam Search found goal nodes in", self.stat_cnt, '/', self.total_states, "states\t", "num solutions:", len(terminal_beam))
+        print("Beam Search found goal nodes in", self.call_cnt, '/', self.total_calls, "LLM calls\t", "num solutions:", len(terminal_beam))
         if self.return_beam:
             # convert terminal_beam to a list of BeamSearchResult
             terminal_beam = [BeamSearchResult(
