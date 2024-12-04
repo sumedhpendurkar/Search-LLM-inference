@@ -54,17 +54,17 @@ class LTSResult(NamedTuple):
 class LTS(SearchAlgorithm, Generic[State, Action]):
     """ LTS Search Algorithm """
 
-    def __init__(self, total_states: int=100, max_per_state: int=10, max_terminal_nodes: int=10):
-        self.total_states = total_states
+    def __init__(self, total_calls: int=100, max_per_state: int=10, max_terminal_nodes: int=10):
+        self.total_calls = total_calls
         self.terminals = []
-        self.stat_cnt = 0
+        self.call_cnt = 0
         self.max_per_state = max_per_state
         self.max_terminal_nodes = max_terminal_nodes ## TODO: Redundant as of now
         self.anytime = False 
 
     def _reset(self):
         self.terminals = []
-        self.stat_cnt = 0
+        self.call_cnt = 0
 
     def __call__(self, world: WorldModel, config: SearchConfig) -> Optional[LTSResult]:
         # Reset the node IDs
@@ -90,7 +90,7 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
         # Set to track visited states
         visited = set()
 
-        while open_set and self.stat_cnt < self.total_states:
+        while open_set and self.call_cnt < self.total_calls:
             # Get the node with the lowest f_cost
             cur_node = heapq.heappop(open_set)
 
@@ -110,6 +110,17 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
 
             # Get possible actions from the current state
             new_actions = config.get_actions(cur_node.state)
+            if not new_actions:
+                continue  # No actions to explore, skip this node
+
+            if len(new_actions) > self.max_per_state:
+                new_actions = new_actions[:self.max_per_state]
+
+            max_num_new_actions = min(len(new_actions), self.total_calls - self.call_cnt)
+            new_actions = new_actions[:max_num_new_actions]
+            self.call_cnt += len(new_actions)
+            print(new_actions)
+
             if not new_actions:
                 continue  # No actions to explore, skip this node
 
@@ -148,16 +159,11 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
 
                 cur_node.add_child(new_node)
 
-            # Increment the state count
-            self.stat_cnt += 1
-        
         #DEBUG
-        if self.stat_cnt == self.total_states:
-            print("Max States reached")
+        print("LTS found goal nodes in", self.call_cnt, "LLM calls")
+        print("Num Terminals:", len(self.terminals))
         # If terminal states are found, return the best one based on reward 
         if self.terminals:
-            print("LTS found goal nodes in", self.stat_cnt, "states")
-            print("Num Terminals:", len(self.terminals))
             best_terminal = max(self.terminals, key=lambda x: sum(x.cum_rewards))
             result = LTSResult(
                 terminal_state=best_terminal.state,
@@ -166,5 +172,4 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
                 terminal_nodes=self.terminals) 
             return result
         return None  # No terminal state found
-
 
