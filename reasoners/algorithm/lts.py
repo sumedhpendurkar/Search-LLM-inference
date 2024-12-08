@@ -54,13 +54,15 @@ class LTSResult(NamedTuple):
 class LTS(SearchAlgorithm, Generic[State, Action]):
     """ LTS Search Algorithm """
 
-    def __init__(self, total_calls: int=100, max_per_state: int=10, max_terminal_nodes: int=10):
+    def __init__(self, total_calls: int=100, max_per_state: int=10, 
+                 lts_temp=0.8, max_terminal_nodes: int=10):
         self.total_calls = total_calls
         self.terminals = []
         self.call_cnt = 0
         self.max_per_state = max_per_state
         self.max_terminal_nodes = max_terminal_nodes ## TODO: Redundant as of now
         self.anytime = False 
+        self.lts_temp = lts_temp
 
     def _reset(self):
         self.terminals = []
@@ -127,7 +129,7 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
             if len(new_actions) > self.max_per_state:
                 new_actions = new_actions[:self.max_per_state]
 
-            pis = config.get_pi(cur_node.state, new_actions)  #Save computational cost
+            pis = config.get_pi(cur_node.state, new_actions, self.lts_temp)  #Save computational cost
              # Explore each action
             for itr, action in enumerate(new_actions):
                 # Generate the next state

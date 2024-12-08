@@ -4,7 +4,7 @@ import numpy as np
 from typing import Optional, Union, Literal
 import time
 
-from .. import LanguageModel, GenerateOutput
+from reasoners import LanguageModel, GenerateOutput
 import tiktoken
 from openai import OpenAI
 
@@ -108,7 +108,8 @@ class OpenAIModel(LanguageModel):
 
     def get_loglikelihood(self,
                           prefix: str,
-                          contents: list[str]) -> list[np.ndarray]:
+                          contents: list[str],
+                          temperature=1) -> list[np.ndarray]:
       
         tokenizer = tiktoken.encoding_for_model('gpt-3.5-turbo')
         contents_tokens = [tokenizer.encode(content[len(prefix):]) for content in contents]
@@ -124,22 +125,26 @@ class OpenAIModel(LanguageModel):
                   messages=[
                       {"role": "user", "content": prefix + tokenizer.decode(contents_tokens[j][:i])}
                   ],
-                  temperature=self.temperature,
+                  temperature=temperature,
                   max_tokens=1
                 )
 
                 # Extract the response
                 choices = completion.choices[0]
                 logprobs = choices.logprobs.content  # This will contain the top token options for each token
-                
                 try: 
                     acc_probs[j] += next(item.logprob for item in logprobs[0].top_logprobs \
                             if item.token == tokenizer.decode([contents_tokens[j][i]]))
                 except StopIteration:
+                    print("Word not found")
                     acc_probs[j] += min(item.logprob for item in logprobs[0].top_logprobs) 
+                #print(logprobs[0].top_logprobs[:3], list(tokenizer.decode([contents_tokens[j][i]])), acc_probs)
         return acc_probs
 
 
 if __name__ == '__main__':
     model = OpenAIModel(model='gpt-3.5-turbo')
-    print(model.generate(['Hello, how are you?']))
+    print(model.generate(['The capital of UK is']))
+    print(np.exp(model.get_loglikelihood("The capital of UK is ", ["The capital of UK is Paris.", "The capital of UK is London.", "The capital of UK is Moscow."], temperature=0.00001)))
+    print(np.exp(model.get_loglikelihood("The capital of UK is ", ["The capital of UK is Paris.", "The capital of UK is London.", "The capital of UK is Moscow."])))
+    print(np.exp(model.get_loglikelihood("The capital of UK is ", ["The capital of UK is Paris.", "The capital of UK is London.", "The capital of UK is Moscow."], temperature=2)))

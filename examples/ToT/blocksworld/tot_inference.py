@@ -98,15 +98,18 @@ class BWConfig(SearchConfig):
             outputs.remove('')
         return outputs
 
-    def get_pi(self, state:BWState, actions: list[BWAction]):
+    def get_pi(self, state:BWState, actions: list[BWAction], temperature=None):
         """
         TODO: log prob to prob conversion
         """
+        temperature = self.temperature if temperature is None else temperature
+
         inputs = self.prompt["icl"].replace("<action>", "\n".join(state.action_history + [""])) \
             .replace("<init_state>", utils.extract_init_state(self.example)) \
             .replace("<goals>", utils.extract_goals(self.example, return_raw=True))
         
-        log_probs = self.base_model.get_loglikelihood(inputs, [inputs + action for action in actions])
+        log_probs = self.base_model.get_loglikelihood(inputs, 
+                        [inputs + action for action in actions], temperature=temperature)
         
         probs = np.exp(log_probs)
         print(actions)

@@ -304,6 +304,7 @@ class Llama3Model(LanguageModel):
             self,
             prefix: str,
             contents: list[str],
+            temperature = 1,
     ) -> np.ndarray:
 
         params = self.model.params
@@ -325,7 +326,7 @@ class Llama3Model(LanguageModel):
         logits = self.model.forward(tokens[:, :], 0)
         acc_probs = torch.zeros(bsz, dtype=torch.float32).cuda()
         for i in range(len(prefix_tokens), max_prompt_size):
-            probs = torch.softmax(logits[:, i - 1, :], dim=-1)
+            probs = torch.softmax(logits[:, i - 1, :] / temperature, dim=-1)
             for j in range(bsz):
                 if tokens[j, i] != self.tokenizer.pad_id:
                     acc_probs[j] += torch.log(probs[j, tokens[j, i]])
@@ -363,6 +364,6 @@ if __name__ == "__main__":
     llama_model = Llama3Model(llama3_ckpts, "1B", max_batch_size=3)
     print(llama_model.generate(["Do you love", "The capital of France is"], eos_token_id=[13], temperature=0, do_sample=True,max_new_tokens=10, output_log_probs=True)) 
     print(llama_model.get_next_token_logits(["The capital of UK is", "The capital of France is", "The capital of Russia is"], ["Paris", "London", "Moscow"]))
-    print(np.exp(llama_model.get_loglikelihood("The capital of UK is", ["The capital of UK is Paris", "The capital of UK is London", "The capital of UK is Moscow"])))
+    print(np.exp(llama_model.get_loglikelihood("The capital of UK is", ["The capital of UK is Paris", "The capital of UK is London", "The capital of UK is Moscow"], temperature=10)))
 
     # CUDA_VISIBLE_DEVICES=0 torchrun --nproc_per_node 1 reasoners/lm/llama_3_model.py
