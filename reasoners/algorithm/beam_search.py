@@ -57,7 +57,8 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
                  replace: Optional[bool] = None, temperature: Optional[float] = None,
                  temperature_decay: Optional[float] = None, reject_sample: Optional[bool] = None,
                  reject_min_reward: Optional[float] = None, unbiased: Optional[bool] = None,
-                 reward_aggregator: Union[Callable[[List[Any]], float], str] = 'last', action_dedup: bool = False,
+                 reward_aggregator: Union[Callable[[List[Any]], float], str] = 'last', 
+                 action_dedup: bool = False, max_per_state: int = 3,
                  early_terminate: bool = True, return_beam: bool = False, total_calls:int = 100, **kwargs) -> None:
         # Initialize the BeamSearch class
         super().__init__(**kwargs)
@@ -77,6 +78,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
         self.total_calls = total_calls
         self.call_cnt = 0
         self.anytime = True
+        self.max_per_state = max_per_state 
 
         # Initializing the reward_aggregator based on the provided argument
         self._initialize_reward_aggregator()
@@ -243,12 +245,13 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
                         actions = [a for a in actions if a not in cache_for_dedup]
                         cache_for_dedup.update(actions)
 
-                    actions = config.get_actions(state)
+                    actions = config.get_actions(state)[:self.max_per_state]
                     if self.unbiased and self.sampling_strategy == 'stochastic':
                         max_num_actions = min(len(actions), self.total_calls - self.call_cnt)
                     else:
                         max_num_actions = min(len(actions) * 2, self.total_calls - self.call_cnt) // 2
                     actions = actions[:max_num_actions]
+                    print(actions)
                     self.call_cnt += len(actions)
 
                     for action in actions:

@@ -360,8 +360,8 @@ def sample_top_pk(probs, p, k):
 
 if __name__ == "__main__":
     llama3_ckpts = "/home/sumedh/meta-llama"
-    llama_model = Llama3Model(llama3_ckpts, "8B", max_batch_size=3)
-    print(llama_model.generate(["Do you love", "The capital of France is"], eos_token_id=[13], max_new_tokens=10, output_log_probs=True)) 
+    llama_model = Llama3Model(llama3_ckpts, "1B", max_batch_size=3)
+    print(llama_model.generate(["Do you love", "The capital of France is"], eos_token_id=[13], temperature=0, do_sample=True,max_new_tokens=10, output_log_probs=True)) 
     print(llama_model.get_next_token_logits(["The capital of UK is", "The capital of France is", "The capital of Russia is"], ["Paris", "London", "Moscow"]))
     print(np.exp(llama_model.get_loglikelihood("The capital of UK is", ["The capital of UK is Paris", "The capital of UK is London", "The capital of UK is Moscow"])))
 
