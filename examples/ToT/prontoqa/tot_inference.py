@@ -18,8 +18,34 @@ from reasoners import WorldModel, SearchConfig
 from reasoners.algorithm import BeamSearch, DFS, LTS, MCTS
 from reasoners.benchmark import ProntoQAEvaluatorFinal
 
-ProntoQAState = list[str]
 ProntoQAAction = str
+
+class ProntoQAState:
+    def __init__(self, states: list[str]):
+        self.states = tuple(states)  # Convert to immutable tuple
+
+    def __eq__(self, other):
+        if isinstance(other, ProntoQAState):
+            return self.states == other.states
+        return False
+
+    def __hash__(self):
+        return hash(self.states)  # Hash based on the tuple
+
+    def __len__(self):
+        return len(self.states)
+
+    def __iter__(self):
+        return iter(self.states)  # Delegate iteration to the list
+
+    def __getitem__(self, index):
+        return self.states[index]  # Delegate indexing to the underlying list
+    
+    def __str__(self):
+        return str(self.states)
+
+    def take_action(self, action: ProntoQAAction):
+        return ProntoQAState(list(self.states) + [action])
 
 def remove_so_prefix(s):
     if s.startswith('So '):
@@ -31,10 +57,10 @@ class ProntoQAToTWorldModel(WorldModel[ProntoQAState, ProntoQAAction, ProntoQAEx
         super().__init__()
     
     def init_state(self) -> ProntoQAState:
-        return []
+        return ProntoQAState([])
     
     def step(self, state: ProntoQAState, action: ProntoQAAction) -> tuple[ProntoQAState, dict]:
-        return state + [action], {}
+        return state.take_action(action), {}
     
     def is_terminal(self, state: ProntoQAState) -> bool:
         if len(state) > 0 and "The answer is" in state[-1]:
@@ -48,6 +74,7 @@ class ProntoQAToTSearchConfig(SearchConfig[ProntoQAState, ProntoQAAction, Pronto
         self.temperature = temperature
         self.base_model = base_model
         assert temperature > 0, "Temperature = 0 indicates greedy decoding. There is no point running multiple chains"
+
     def get_actions(self, state: ProntoQAState) -> list[ProntoQAAction]:
         # print(f"state: {state}\n")
         input_prompt = self.prompt
@@ -58,10 +85,14 @@ class ProntoQAToTSearchConfig(SearchConfig[ProntoQAState, ProntoQAAction, Pronto
         eos_token_id=["."]
         output = self.base_model.generate([input_prompt] * self.n_actions, eos_token_id=eos_token_id, hide_input=True, temperature=self.temperature, do_sample=True).text
         ret = [o.strip() for o in output]
-        print(f"Input prompt to model.generate: {input_prompt}")
-        print(f"model generated actions: {ret}")
+        #print(f"Input prompt to model.generate: {input_prompt}")
+        #print(f"model generated actions: {ret}")
         # deduplicate
-        ret = dict.fromkeys(ret).keys()
+        ret = list(dict.fromkeys(ret).keys())
+        
+        if '' in ret:
+            ret.remove('')
+
         return ret
 
     def fast_reward(self, state: ProntoQAState, action: ProntoQAAction) -> tuple[float, dict]:
@@ -74,11 +105,11 @@ class ProntoQAToTSearchConfig(SearchConfig[ProntoQAState, ProntoQAAction, Pronto
         intuition = self.base_model.get_loglikelihood(input_prompt, 
             [candidate])[0]
         
-        print(f" prompt: {self.prompt}")
-        print(f"action: {processed_action}")
-        print(f"input_prompt: {input_prompt}")
-        print("hello")
-        print(f"state: {processed_state}")
+        #print(f" prompt: {self.prompt}")
+        #print(f"action: {processed_action}")
+        #print(f"input_prompt: {input_prompt}")
+        #print("hello")
+        #print(f"state: {processed_state}")
 
         input_prompt = ""
         input_prompt += prompts.valid_tot.EXAMPLES
@@ -91,13 +122,13 @@ class ProntoQAToTSearchConfig(SearchConfig[ProntoQAState, ProntoQAAction, Pronto
             candidates=["Yes", "No"]
         )
 
-        print(f"input_prompt: {input_prompt}")
+        #print(f"input_prompt: {input_prompt}")
         reward: float = output_logits[0][0].item()
         reward:float = torch.softmax(torch.tensor(output_logits[0]), dim=0)[0].item()
-        print(f" reward: {reward}")
+        #print(f" reward: {reward}")
 
         self_eval = reward  
-        print(f" intuition: {intuition}, self_eval: {self_eval}")
+        #print(f" intuition: {intuition}, self_eval: {self_eval}")
         return intuition*0.5 + self_eval*0.5, {"intuition": intuition, "self_eval":self_eval}
 
     def reward(self, state, action, **kwargs) -> tuple[float, dict]:
@@ -105,6 +136,25 @@ class ProntoQAToTSearchConfig(SearchConfig[ProntoQAState, ProntoQAAction, Pronto
         intuition = kwargs["intuition"]
         self_eval = kwargs["self_eval"]
         return intuition*0.5 + self_eval*0.5, {"intuition": intuition, "self_eval":self_eval}
+    
+    def get_pi(self, state, actions, temperature=None):
+        """
+        TODO: log prob to prob conversion
+        """
+        temperature = self.temperature if temperature is None else temperature
+        input_prompt = self.prompt
+        input_prompt += "Q: " + self.example.test_example.question + " " + self.example.test_example.query + "\nA:"
+        # print(f"input_prompt: '{input_prompt}'\n")
+        input_prompt += "".join([" " + s for s in state])
+
+        log_probs = self.base_model.get_loglikelihood(input_prompt, 
+                        [input_prompt + ' ' + action for action in actions], temperature=temperature)
+        
+        probs = np.exp(log_probs)
+        print(actions)
+        print(probs)
+        return probs
+
 
 def main(
            model_dir: str,
@@ -123,6 +173,9 @@ def main(
         search_algo_params |= {"max_depth": depth_limit}
     elif search_algo == "dfs":
         search_algo_params |= {"depth": depth_limit}
+    elif search_algo == "lts":
+        pass
+        #search_algo_params |= {"depth": depth_limit}
     else:
         print("Unknown search algorithm", search_algo)
         raise NotImplementedError
@@ -142,8 +195,6 @@ def main(
             return ""
     
     if base_lm in ['llama2', 'llama3']:    
-        import torch
-        import torch.backends.cudnn
         np.random.seed(0)
         random.seed(0)
         torch.manual_seed(0)
