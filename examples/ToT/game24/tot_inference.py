@@ -4,9 +4,10 @@ from typing import Type, Optional, Literal
 import numpy as np
 from tqdm import tqdm
 from datetime import datetime
+import os, sys
 
 from reasoners import LanguageModel, Reasoner, SearchAlgorithm
-from reasoners.algorithm import BeamSearch, MCTS, MCTSNode
+from reasoners.algorithm import BeamSearch, LTS, DFS , MCTSNode
 from reasoners.visualization import TreeLog
 
 from world_model import Game24WorldModel, Game24State, Game24Action
@@ -24,40 +25,45 @@ def node_visualizer(x: MCTSNode):
             ret['output'] = x.state.output
     return ret
 
+def tot_game24(base_model: LanguageModel,
+           prompts: dict,
+           calc_reward: Literal['sampling', 'logits'] = 'logits',
+           search_algo: str = "beam",
+           n_action: int = 4,
+           n_eval: int = 3,
+           batch_size: int = 3,
+           resume: int = 0,
+           depth_limit: int = 6,
+           log_dir: Optional[str] = None,
+           disable_log: bool = False,
+           temperature: float = 0.8,
+           n_beam: int = 5,
+           **search_algo_params):
 
-def rap_game24(base_model: LanguageModel,
-               prompts: dict,
-               search_algo: Type[SearchAlgorithm] = BeamSearch,
-               resume: int = 0,
-               n_action: int = 4,
-               n_beam: int = 5,
-               n_eval: int = 3,
-               depth_limit: int = 4,
-               batch_size: int = 3,
-               log_dir: Optional[str] = None,
-               disable_log: bool = False,
-               calc_reward: Literal['sampling', 'logits'] = 'sampling',
-               **search_algo_params):
-    if not disable_log:
-        if log_dir is None:
-            log_dir = f'logs/game24_{search_algo.__name__}/{datetime.now().strftime("%m%d%Y-%H%M%S")}'
-        os.makedirs(log_dir, exist_ok=resume >= 0)
-        os.makedirs(os.path.join(log_dir, 'algo_output'), exist_ok=True)
-        with open(os.path.join(log_dir, 'args.txt'), 'w') as f:
-            print(sys.argv, file=f)
-
-    ## keep the best 5 candidates, need at most 4 steps to solve
-    ## following ToT, eval step will consider number of times to prompt for state evaluation
-    # search_algo_params |= {'beam_size': n_beam, 'max_depth': depth_limit}
-    search_algo_params |= {'output_trace_in_each_iter': True, 'depth_limit': depth_limit, 'disable_tqdm': False}
+    if search_algo == "beam":
+        search_algo_params |= {"max_depth": depth_limit, 'beam_size':n_beam}
+        search_algo = BeamSearch(**search_algo_params)
+    elif search_algo == "dfs":
+        search_algo_params |= {"depth": depth_limit}
+        search_algo = DFS(**search_algo_params)
+    elif search_algo == "lts":
+        search_algo = LTS(**search_algo_params)
+        pass
+        #search_algo_params |= {"depth": depth_limit}
+    else:
+        print("Unknown search algorithm", search_algo)
+        raise NotImplementedError
+    
     world_model = Game24WorldModel(base_model=base_model, prompt=prompts, batch_size=batch_size)
-    config = Game24Config(base_model=base_model, prompt=prompts, calc_reward=calc_reward,
+    config = Game24Config(base_model=base_model, prompt=prompts, calc_reward=calc_reward, temperature=temperature,
                           n_actions=n_action, n_eval=n_eval, batch_size=batch_size, depth_limit=depth_limit,)
-    search_algo = search_algo(**search_algo_params)
+
     reasoner = Reasoner(world_model=world_model, search_config=config, search_algo=search_algo)
 
     # test from 900-999
     dataset = utils.read_data(file='./examples/ToT/game24/data/24.csv')[900:1000]
+    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(os.path.join(log_dir,'algo_output'), exist_ok=True)
     correct_count = 0
     for i, example in enumerate(tqdm(dataset, total=len(dataset), initial=0, desc='game24')):
         # print(f'\n======== example {i}: {example} ========')
@@ -78,10 +84,13 @@ def rap_game24(base_model: LanguageModel,
                 print(log_str, file=f)
             with open(os.path.join(log_dir, 'algo_output', f'{resume + i + 1}.pkl'), 'wb') as f:
                 pickle.dump(algo_output, f)
+            """
             if isinstance(search_algo, MCTS):
                 with open(os.path.join(log_dir, 'algo_output', f'{resume + i + 1}.json'), 'w') as f:
                     # noinspection PyTypeChecker
                     print(TreeLog.from_mcts_results(algo_output, node_data_factory=node_visualizer), file=f)
+            """
+    print("Accuracy:",accuracy)
 
 
 if __name__ == '__main__':
@@ -101,9 +110,9 @@ if __name__ == '__main__':
         warnings.filterwarnings('ignore')
 
     def main(base_lm: Literal['llama', 'llama.cpp', 'llama2', 'hf', 'exllama','llama3','openai'] = 'llama3',
+             temperature = 0.8,
              llama_ckpts: str = llama_ckpts,
-             llama_2_ckpts: str = llama_2_ckpts,
-             llama_3_ckpts: str = llama_3_ckpts,
+             model_dir = '/path/to/model',
              llama_size: str = '13B',
              llama_cpp_path: str = None,
              llama_cpp_n_batch: int = 512,
@@ -115,13 +124,14 @@ if __name__ == '__main__':
              exllama_lora_dir: Optional[str] = None,
              exllama_mem_map: Optional[str] = None,
              batch_size: int = 1,
+             search_algo = "beam",
              prompts: str = 'examples/ToT/game24/prompts/game24.json',
              disable_log: bool = False,
              disable_tqdm: bool = False,
              **kwargs):
         with open(prompts) as f:
             prompts = json.load(f)
-        if base_lm in ['llama', 'llama2', 'llama3']:
+        if base_lm in ['llama', 'llama2', 'llama3', 'llama3.2']:
             import torch
             import torch.backends.cudnn
             np.random.seed(0)
@@ -129,7 +139,11 @@ if __name__ == '__main__':
             torch.manual_seed(0)
             torch.cuda.manual_seed(0)
             torch.backends.cudnn.deterministic = True
-
+        
+        llama_ckpts = model_dir
+        llama_2_ckpts = model_dir
+        llama_3_ckpts = model_dir
+        
         if base_lm == 'llama':
             from reasoners.lm import LlamaModel
             base_model = LlamaModel(llama_ckpts, llama_size, max_batch_size=batch_size)
@@ -155,13 +169,12 @@ if __name__ == '__main__':
                                       max_batch_size=batch_size, max_new_tokens=512, max_seq_length=2048)
         else:
             assert False, f'cannot resolve {base_lm=}'
-        rap_game24(base_model=base_model,
+        tot_game24(base_model=base_model,
                    prompts=prompts,
                    batch_size=batch_size,
                    n_beam=5,
                    disable_log=disable_log or local_rank != 0,
-                   search_algo=MCTS,
+                   search_algo=search_algo,
                    **kwargs)
-
 
     fire.Fire(main)

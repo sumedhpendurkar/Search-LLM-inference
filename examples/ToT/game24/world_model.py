@@ -18,6 +18,9 @@ class Game24State:
         else:
             return f'Game24State({repr(self.current)}, output={repr(self.output)})'
 
+    def __hash__(self):
+        #TODO: check
+        return hash(self.current)
 
 Game24Action = str
 

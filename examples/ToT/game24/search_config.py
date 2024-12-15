@@ -82,6 +82,24 @@ class Game24Config(SearchConfig):
             actions = list(dict.fromkeys(actions))
             return actions
 
+    def get_pi(self, state:Game24State, actions: list[Game24Action], temperature=None):
+        """
+        TODO: WIP: the prompt might be wrong! check with generate!!!! 
+        """
+        prompt = self.propose_prompt_wrap(state)
+        self.base_model.generate([prompt], num_return_sequences=1, do_sample=False, eos_token_id='Input').text[0]
+        temperature = self.temperature if temperature is None else temperature
+
+        log_probs = self.base_model.get_loglikelihood(prompt,
+                        [prompt + action for action in actions], temperature=temperature)
+        
+        probs = np.exp(log_probs)
+        print(actions)
+        print(probs)
+        return probs
+
+
+
     def _reward(self, state: Game24State, action: Game24Action) -> float:
         if state.current == '':
             return 0.
