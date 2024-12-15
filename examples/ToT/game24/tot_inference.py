@@ -162,7 +162,7 @@ if __name__ == '__main__':
                                  peft_pth=hf_peft_path, quantized=hf_quantized, load_awq_pth=hf_load_awq_path)
         elif base_lm == 'openai':
             from reasoners.lm import OpenAIModel
-            model = OpenAIModel(model='gpt-3.5-turbo', temperature=temperature, max_tokens=2048 )
+            base_model = OpenAIModel(model='gpt-3.5-turbo', temperature=temperature, max_tokens=2048 )
         elif base_lm == 'exllama':
             from reasoners.lm import ExLlamaModel
             base_model = ExLlamaModel(exllama_model_dir, exllama_lora_dir, mem_map=exllama_mem_map,
