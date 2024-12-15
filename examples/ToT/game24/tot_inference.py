@@ -26,7 +26,6 @@ def node_visualizer(x: MCTSNode):
     return ret
 
 def tot_game24(base_model: LanguageModel,
-           prompts: dict,
            calc_reward: Literal['sampling', 'logits'] = 'logits',
            search_algo: str = "beam",
            n_action: int = 4,
@@ -54,8 +53,8 @@ def tot_game24(base_model: LanguageModel,
         print("Unknown search algorithm", search_algo)
         raise NotImplementedError
     
-    world_model = Game24WorldModel(base_model=base_model, prompt=prompts, batch_size=batch_size)
-    config = Game24Config(base_model=base_model, prompt=prompts, calc_reward=calc_reward, temperature=temperature,
+    world_model = Game24WorldModel(base_model=base_model, batch_size=batch_size)
+    config = Game24Config(base_model=base_model, calc_reward=calc_reward, temperature=temperature,
                           n_actions=n_action, n_eval=n_eval, batch_size=batch_size, depth_limit=depth_limit,)
 
     reasoner = Reasoner(world_model=world_model, search_config=config, search_algo=search_algo)
@@ -67,7 +66,7 @@ def tot_game24(base_model: LanguageModel,
     correct_count = 0
     for i, example in enumerate(tqdm(dataset, total=len(dataset), initial=0, desc='game24')):
         # print(f'\n======== example {i}: {example} ========')
-        reasoner.world_model = Game24WorldModel(base_model=base_model, prompt=prompts, batch_size=batch_size)
+        reasoner.world_model = Game24WorldModel(base_model=base_model, batch_size=batch_size)
         # algo_output = reasoner(example, action_dedup=True, return_beam=True, early_terminate=False,
         #                        reward_strategy='last_iter')
         algo_output = reasoner(example)
@@ -123,14 +122,11 @@ if __name__ == '__main__':
              exllama_model_dir: str = 'WizardMath-13B-V1.0-GPTQ',
              exllama_lora_dir: Optional[str] = None,
              exllama_mem_map: Optional[str] = None,
-             batch_size: int = 1,
+             batch_size: int = 4,
              search_algo = "beam",
-             prompts: str = 'examples/ToT/game24/prompts/game24.json',
              disable_log: bool = False,
              disable_tqdm: bool = False,
              **kwargs):
-        with open(prompts) as f:
-            prompts = json.load(f)
         if base_lm in ['llama', 'llama2', 'llama3', 'llama3.2']:
             import torch
             import torch.backends.cudnn
@@ -170,7 +166,6 @@ if __name__ == '__main__':
         else:
             assert False, f'cannot resolve {base_lm=}'
         tot_game24(base_model=base_model,
-                   prompts=prompts,
                    batch_size=batch_size,
                    n_beam=5,
                    disable_log=disable_log or local_rank != 0,

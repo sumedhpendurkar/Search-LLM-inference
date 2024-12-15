@@ -28,12 +28,10 @@ Game24Action = str
 class Game24WorldModel(WorldModel):
     def __init__(self,
                  base_model: LanguageModel,
-                 prompt: dict,
                  n_confidence=8,
                  batch_size=2, ) -> None:
         super().__init__()
         self.base_model = base_model
-        self.prompt = prompt
         self.batch_size = batch_size
         self.n_confidence = n_confidence
 

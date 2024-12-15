@@ -15,7 +15,6 @@ from prompts.game24 import output_prompt, propose_prompt, value_prompt, value_la
 class Game24Config(SearchConfig):
     def __init__(self,
                  base_model: LanguageModel,
-                 prompt: dict,
                  n_actions=4,
                  batch_size=2,
                  depth_limit=4,
@@ -25,7 +24,6 @@ class Game24Config(SearchConfig):
         super().__init__()
         self.base_model = base_model
         self.example = None
-        self.prompt = prompt
         self.batch_size = batch_size
         self.n_actions = n_actions
         self.n_eval = n_eval
@@ -57,29 +55,26 @@ class Game24Config(SearchConfig):
         return value
 
     def get_actions(self, state: Game24State) -> list[Game24Action]:
+        
         if state.current == '':
-            return []
+            raise ValueError("State.Current is empty:" + state.current)
         # print(f'Generating actions for {state}')
         if state.current == '24':
             prompt = self.output_prompt_wrap(state)
             output = \
             self.base_model.generate([prompt], num_return_sequences=1, do_sample=False, eos_token_id='\n').text[0]
             output = 'Answer: ' + output.strip()
-            return [output]
+            return [output]   # Terminal state: goal TODO: why return output?
         elif ' ' not in state.current:
-            return []
+            return []   # Terminal state: not a goal
         else:
             prompt = self.propose_prompt_wrap(state)
             output = \
-            self.base_model.generate([prompt], num_return_sequences=1, do_sample=False, eos_token_id='Input').text[0]
-            output = output.strip()
-            if '\n\n' in output:
-                output = output.split('\n\n')[0]
-            output = output.split('\n')
-            actions = [x for x in output if 'left' in x]
+            self.base_model.generate([prompt], num_return_sequences=4, do_sample=True, eos_token_id='\n').text
+            actions = [x.strip() for x in output if 'left' in x]
             # set does not guarantee order, but dict does guarantee
             # we cannot use set here because torch.distributed in LLaMA requires the same order across all processes
-            actions = list(dict.fromkeys(actions))
+            #actions = list(dict.fromkeys(actions))
             return actions
 
     def get_pi(self, state:Game24State, actions: list[Game24Action], temperature=None):
@@ -87,7 +82,6 @@ class Game24Config(SearchConfig):
         TODO: WIP: the prompt might be wrong! check with generate!!!! 
         """
         prompt = self.propose_prompt_wrap(state)
-        self.base_model.generate([prompt], num_return_sequences=1, do_sample=False, eos_token_id='Input').text[0]
         temperature = self.temperature if temperature is None else temperature
 
         log_probs = self.base_model.get_loglikelihood(prompt,
@@ -101,6 +95,9 @@ class Game24Config(SearchConfig):
 
 
     def _reward(self, state: Game24State, action: Game24Action) -> float:
+        
+        return 0
+
         if state.current == '':
             return 0.
         next_state = copy.deepcopy(state)

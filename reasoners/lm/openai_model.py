@@ -28,13 +28,14 @@ class OpenAIModel(LanguageModel):
                 top_p: float = 1.0,
                 num_return_sequences: int = 1,
                 rate_limit_per_min: Optional[int] = 20,
-                stop: Optional[str] = None,
+                eos_token_id: Optional[str] = None,
                 logprobs: Optional[int] = None,
                 temperature = None,
                 additional_prompt=None,
                 retry = 64,
                 **kwargs) -> GenerateOutput:
-        
+       
+        stop = eos_token_id
         gpt_temperature = self.temperature if temperature is None else temperature
         if isinstance(prompt, list):
             assert len(prompt) == 1
