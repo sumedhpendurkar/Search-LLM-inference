@@ -105,7 +105,55 @@ class OpenAIModel(LanguageModel):
                               prompt: Union[str, list[str]],
                               candidates: Union[list[str], list[list[str]]],
                               **kwargs) -> list[np.ndarray]:
-        raise NotImplementedError("GPTCompletionModel does not support get_next_token_logits")
+        """
+        Compute logits for the next token given a prompt and candidates, using OpenAI API.
+
+        Args:
+            prompt (Union[str, list[str]]): The input prompt as a string or list of strings.
+            candidates (Union[list[str], list[list[str]]]): A list of candidate tokens or token sequences.
+
+        Returns:
+            list[np.ndarray]: A list of numpy arrays containing the logits for each candidate token.
+        """
+        if isinstance(prompt, str):
+            prompt = [prompt]
+        if isinstance(candidates[0], str):
+            candidates = [candidates] * len(prompt)
+
+        results = []
+        for p, cands in zip(prompt, candidates):
+            # Construct the messages for OpenAI API
+            messages = [{"role": "user", "content": p}]
+
+            # Call OpenAI API to get logprobs
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                max_tokens=1,  # We only care about the next token
+                temperature=0,  # Deterministic output
+                logprobs=True,  # Request top logits
+                top_logprobs=10,
+                **kwargs
+            )
+
+            choices = response.choices[0]
+            logprobs = choices.logprobs.content  # logprobs is a list
+            top_logprobs = logprobs[0].top_logprobs  # List of items with .token and .logprob
+
+            cand_logits = []
+            for cand in cands:
+                # Try to find the candidate in top_logprobs
+                matching_items = [item for item in top_logprobs if item.token == cand]
+                if matching_items:
+                    # Candidate found, append its logprob
+                    cand_logits.append(matching_items[0].logprob)
+                else:
+                    # Candidate not found, use minimum logprob
+                    cand_logits.append(min(item.logprob for item in top_logprobs))
+
+            results.append(np.array(cand_logits, dtype=np.float32))
+
+        return results
 
     def get_loglikelihood(self,
                           prefix: str,
@@ -146,6 +194,5 @@ class OpenAIModel(LanguageModel):
 if __name__ == '__main__':
     model = OpenAIModel(model='gpt-3.5-turbo')
     print(model.generate(['The capital of UK is']))
-    print(np.exp(model.get_loglikelihood("The capital of UK is ", ["The capital of UK is Paris.", "The capital of UK is London.", "The capital of UK is Moscow."], temperature=0.00001)))
-    print(np.exp(model.get_loglikelihood("The capital of UK is ", ["The capital of UK is Paris.", "The capital of UK is London.", "The capital of UK is Moscow."])))
-    print(np.exp(model.get_loglikelihood("The capital of UK is ", ["The capital of UK is Paris.", "The capital of UK is London.", "The capital of UK is Moscow."], temperature=2)))
+    print(model.get_next_token_logits(["The capital of UK is", "The capital of France is", "The capital of Russia is"], ["Paris", "London", "Moscow"]))
+    #print(np.exp(model.get_loglikelihood("The capital of UK is ", ["The capital of UK is Paris.", "The capital of UK is London.", "The capital of UK is Moscow."])))
