@@ -55,18 +55,91 @@ Input: {input}
 Answer:'''
 
 # 1-shot
-propose_prompt = '''Input: 2 8 8 14
-Possible next steps:
-2 + 8 = 10 (left: 8 10 14)
-8 / 2 = 4 (left: 4 8 14)
-14 + 2 = 16 (left: 8 8 16)
-2 * 8 = 16 (left: 8 14 16)
-8 - 2 = 6 (left: 6 8 14)
-14 - 8 = 6 (left: 2 6 8)
-14 / 2 = 7 (left: 7 8 8)
-14 - 2 = 12 (left: 8 8 12)
+propose_prompt = '''Let me consider how to systematically enumerate all possible operations for a given set of numbers to reach 24.
+
+I want to explore all ways of combining the given numbers using addition (+), subtraction (-), multiplication (*), and division (/), trying every possible pair and every possible order, and continue doing so recursively until I either find a sequence of operations that results in exactly 24, or confirm that no solution exists.
+
+Here is the step-by-step method I will follow:
+
+- Initial enumeration: Start with the given input numbers. At the first step, list all possible operations between every pair of numbers. For each pair (a, b) of numbers, consider all operations:
+    a + b
+    a - b 
+    b - a 
+    a * b
+    a / b (if b ≠ 0) 
+    b / a (if a ≠ 0)
+
+   For each resulting value, show the new set of numbers (the result replaces the two chosen numbers) and record the operation.
+
+
+- Recursive exploration: After performing one operation, I now have fewer numbers. Repeat the same enumeration process with the new set of numbers, continuing until:
+    - I end up with a single number. If that number is 24 (within a small tolerance), I have found a solution. Show the sequence of steps that leads to 24.
+    - Or I have tried all possible sequences of operations without reaching 24.
+
+- Format of steps:
+    - Each step should show the operation performed and the resulting set of numbers. For example: operand1 operator operand2 = result (left: remaining_numbers)
+    - Continue to show steps until I reach a single number. If that single number is 24, print out the entire sequence of steps that led there.
+
+First, I'll show an example with a simpler input to illustrate how I list out operations:
+
+For example, if my input was:
+
+Input: 1 2 3
+
+List all possible operations between every pair of numbers using '+', '-', '*', '/'.
+For each operation, show the result and the remaining numbers. Use the format:
+operand1 operator operand2 = result (left: remaining numbers)
+
+Possible operations:
+1 + 2 = 3 (left: 3 3)
+1 - 2 = -1 (left: -1 3)
+1 * 2 = 2 (left: 2 3)
+1 / 2 = 0.5 (left: 0.5 3)
+1 + 3 = 4 (left: 2 4)
+1 - 3 = -2 (left: 2 -2)
+1 * 3 = 3 (left: 2 3)
+1 / 3 = 0.3333 (left: 2 0.3333)
+2 + 1 = 3 (left: 3 3)
+2 - 1 = 1 (left: 1 3)
+2 * 1 = 2 (left: 3 2)
+2 / 1 = 2 (left: 3 2)
+2 + 3 = 5 (left: 1 5)
+2 - 3 = -1 (left: 1 -1)
+2 * 3 = 6 (left: 1 6)
+2 / 3 = 0.6667 (left: 1 0.6667)
+3 + 1 = 4 (left: 2 4)
+3 - 1 = 2 (left: 2 2)
+3 * 1 = 3 (left: 2 3)
+3 / 1 = 3 (left: 2 3)
+3 + 2 = 5 (left: 1 5)
+3 - 2 = 1 (left: 1 1)
+3 * 2 = 6 (left: 1 6)
+3 / 2 = 1.5 (left: 1 1.5)
+
+
+- Example leading to 24:
+Consider input: 4 4 6 8
+One known solution is: (4 + 8) * (6 - 4) = 24
+Steps:
+4 + 8 = 12 (left: 4, 6, 12)
+6 - 4 = 2 (left: 2, 12)
+2 * 12 = 24 (left: 24)
+
+Another example:
+Input: 2 9 10 12
+A known solution is: (12 * 2) * (10 - 9) = 24
+Steps:
+12 * 2 = 24 (left: 9, 10, 24)
+10 - 9 = 1 (left: 1, 24)
+24 * 1 = 24 (left: 24)
+
+These examples show the desired level of detail and the approach to listing operations.
+
+Now, apply this method for:
+
 Input: {input}
-Possible next steps:
+
+Possible operations:
 '''
 
 value_prompt = '''Evaluate if given numbers can reach 24 (sure/likely/impossible)
