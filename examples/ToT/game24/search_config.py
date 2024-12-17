@@ -69,8 +69,10 @@ class Game24Config(SearchConfig):
             return []   # Terminal state: not a goal
         else:
             prompt = self.propose_prompt_wrap(state)
-            output = \
-            self.base_model.generate([prompt], num_return_sequences=4, do_sample=True, eos_token_id='\n').text
+            output = self.base_model.generate([prompt], do_sample=True, max_new_tokens=15, 
+                        num_return_sequences=self.n_actions, eos_token_id='\n').text
+            for i in range(len(output)):
+                output[i] = output[i].split('\n')[0]
             actions = [x.strip() for x in output if 'left' in x]
             # set does not guarantee order, but dict does guarantee
             # we cannot use set here because torch.distributed in LLaMA requires the same order across all processes
