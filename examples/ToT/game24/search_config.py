@@ -69,7 +69,7 @@ class Game24Config(SearchConfig):
             return []   # Terminal state: not a goal
         else:
             prompt = self.propose_prompt_wrap(state)
-            output = self.base_model.generate([prompt], do_sample=True, max_new_tokens=15, 
+            output = self.base_model.generate([prompt], do_sample=True, max_new_tokens=25, 
                         num_return_sequences=self.n_actions, eos_token_id='\n').text
             for i in range(len(output)):
                 output[i] = output[i].split('\n')[0]
