@@ -6,7 +6,7 @@ from tqdm import tqdm
 from datetime import datetime
 
 from reasoners import LanguageModel, Reasoner, SearchAlgorithm
-from reasoners.algorithm import DFS
+from reasoners.algorithm import DFS, CW_DFS
 
 from world_model import CrosswordsWorldModel
 from search_config import CrosswordsConfig
@@ -15,7 +15,7 @@ from utils import MiniCrosswordsEnv
 
 
 def tot_crosswords(base_model: LanguageModel,
-              search_algo: Type[SearchAlgorithm] = DFS,
+              search_algo: Type[SearchAlgorithm] = CW_DFS,
               resume: int = 0,
               n_eval: int = 8,
               depth: int = 10,
