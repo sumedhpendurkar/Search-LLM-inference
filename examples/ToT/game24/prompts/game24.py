@@ -77,8 +77,8 @@ Step-by-step method:
     - Or I have tried all possible sequences of operations without reaching 24.
 
 - Format of steps:
-    - Each step should show the operation performed and the resulting set of numbers. For example: operand1 operator operand2 = result (left: remaining numbers)
-    - Continue to show steps until I reach a single number. If that single number is 24, print out the entire sequence of steps that led there.
+    - Each step should show the operations performed and the resulting set of numbers. For example: operand1 operator operand2 = result (left: remaining numbers)
+    - Continue to show steps until I reach a single number. If that single number is 24, I will print out the entire sequence of steps that led there.
 
 For example, if my input was:
 
@@ -143,24 +143,25 @@ Steps:
 12 + 12 = 24 (left: 24)
 
 - Example of optimal solution:
-Input: 2 2 3 12
+Input: 2 4 4 6
 Steps:
-12 / 2 = 6 (left: 2 3 6)
-6 * 2 = 12 (left: 3 12)
-12 * 3 = 24 (left: 24)
+4 + 4 = 8 (left: 2 6 8)
+8 * 6 = 48 (left: 2 48)
+48 / 2 = 24 (left: 24)
 
 - Example of optimal solution:
-Input: 2 2 4 5
+Input: 3, 5, 5, 6
 Steps:
-5 - 2 = 3 (left: 2 4 3)
-3 * 4 = 12 (left: 2 12)
-12 * 2 = 24 (left: 24)
+5 + 5 = 10 (left: 3, 6, 10)
+10 * 3 = 30 (left: 6, 30)
+30 - 6 = 24 (left: 24)
 
 
 These examples show the desired level of detail and the approach to listing operations.
 
 Important:
-- Do not add any prefixes like "1.", '-' or other numbering before the operations.
+- I will not add any prefixes like "1.", "-" or other numbering before the operations.
+- I will try not to have bias towards a specific operator while doing the operations. I will try to explore diverse solutions using diverse operators.
 
 Now, use these steps to find optimal solution for:
 
