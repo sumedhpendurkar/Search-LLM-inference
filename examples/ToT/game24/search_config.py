@@ -68,9 +68,12 @@ class Game24Config(SearchConfig):
         elif ' ' not in state.current:
             return []   # Terminal state: not a goal
         else:
+            print(state)
             prompt = self.propose_prompt_wrap(state)
             output = \
             self.base_model.generate([prompt], num_return_sequences=4, do_sample=True, eos_token_id='\n').text
+            #import sys
+            #sys.exit(2)
             actions = [x.strip() for x in output if 'left' in x]
             # set does not guarantee order, but dict does guarantee
             # we cannot use set here because torch.distributed in LLaMA requires the same order across all processes
