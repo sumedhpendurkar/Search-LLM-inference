@@ -68,7 +68,6 @@ class Game24Config(SearchConfig):
         elif ' ' not in state.current:
             return []   # Terminal state: not a goal
         else:
-            print(state)
             prompt = self.propose_prompt_wrap(state)
             output = self.base_model.generate([prompt], do_sample=True, max_new_tokens=25, 
                         num_return_sequences=self.n_actions, eos_token_id='\n').text
@@ -99,8 +98,6 @@ class Game24Config(SearchConfig):
 
     def _reward(self, state: Game24State, action: Game24Action) -> float:
         
-        return 0
-
         if state.current == '':
             return 0.
         next_state = copy.deepcopy(state)
