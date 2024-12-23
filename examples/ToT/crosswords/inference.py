@@ -66,7 +66,7 @@ def tot_crosswords(base_model: LanguageModel,
                 best = info['info']['r_word']
                 output = env.ans
                 answer = env.ans_gt
-            print(f'{output_i}, {env.ans}, {output}')
+            #print(f'{output_i}, {env.ans}, {output}')
             infos.append(info)
         answer_list.append((output, answer, best, search_algo.stat_cnt))
         infoss.append(infos)
@@ -120,7 +120,7 @@ if __name__ == '__main__':
             base_model = Llama3Model(model_dir, llama_size, max_batch_size=batch_size)
             raise SystemExit("Non't support yet")
         else:
-            base_model = OpenAIModel(model=model, temperature=temperature, max_tokens=1000)
+            base_model = OpenAIModel(model='gpt-4o-mini', temperature=temperature, max_tokens=1000)
         #log_dir = 'logs/crosswords_dfs/test-gpt3.5'
         tot_crosswords(base_model=base_model,
                   batch_size=batch_size, # not used

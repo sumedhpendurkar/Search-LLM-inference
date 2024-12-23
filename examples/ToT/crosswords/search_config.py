@@ -57,9 +57,9 @@ class CrosswordsConfig(SearchConfig):
         env, actions, trace = state
         obs = env.render(status=True)
         if obs in self.cache: 
-            print('cache hit')
+            #print('cache hit')
             return self.cache[obs]
-        print('call gpt')
+        #print('call gpt')
         # print(f"current obs: {obs}")
         # print(f'prompt: {self.prompt_wrap(obs)}')
 

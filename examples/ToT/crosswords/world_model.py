@@ -80,7 +80,7 @@ class CrosswordsWorldModel(WorldModel):
 
         ## to next state
         obs, r, done, new_info = new_env.step(action[0])
-        print('new action check', action, new_env.steps, new_env.status)
+        #print('new action check', action, new_env.steps, new_env.status)
         count = self.prompt_status(env=new_env)
         new_state_actions.append(action)
         new_info = {'env_step': new_env.steps, 'actions': new_state_actions.copy(), 'info': new_info, 'count': count}
