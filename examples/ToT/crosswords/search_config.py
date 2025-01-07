@@ -64,20 +64,24 @@ class CrosswordsConfig(SearchConfig):
         # print(f'prompt: {self.prompt_wrap(obs)}')
 
         if isinstance(self.base_model, OpenAIModel):
-            eos_token_id = []
+            eos_token_id = [')']
         elif isinstance(self.base_model, Llama2Model):
             eos_token_id = ["\n"]
         elif isinstance(self.base_model, Llama3Model):
             eos_token_id = ["\n\n", ".\n", ".\n\n","\n"]
+        print("Num Eval", self.n_eval, eos_token_id)
         responses = self.base_model.generate([self.prompt_wrap(obs)], #+"Make sure using the format 'h1. apple (medium)' in answer."
                                             num_return_sequences=self.n_eval,
-                                            stop=None,
                                             hide_input=True,
                                             do_sample=True,
                                             temperature=self.temperature,
+                                            stop=eos_token_id,
                                             eos_token_id=eos_token_id).text
-        #print(self.prompt_wrap(obs))
-        
+        print(responses)
+        for i, r in enumerate(responses):
+            r += ')\n'
+            responses[i] = r
+        print(responses)
         #responses = self.base_model.generate(self.prompt_wrap(obs), num_return_sequences=self.n_eval, stop=None).text
         #print(responses)
 

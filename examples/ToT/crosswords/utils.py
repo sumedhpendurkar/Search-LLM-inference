@@ -32,6 +32,9 @@ class MiniCrosswordsEnv:
             self.steps = steps
         return self.render()
     
+    def is_terminal(self):
+        return '_' not in self.board # if empty in board -- not a terminal
+
     def render_gt_board(self):
         s = "GT Board:\n"
         for i in range(5):

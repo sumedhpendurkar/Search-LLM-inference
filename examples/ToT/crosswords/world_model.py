@@ -32,10 +32,8 @@ class CrosswordsWorldModel(WorldModel):
 
     def is_terminal(self, state: CrosswordsState) -> bool:
         env, actions, info = state
-        if len(info) == 0:
-            return False
-        return True
-    
+        return env.is_terminal()
+
     def prompt_status(self, env):
         count = {'sure': 0, 'maybe': 0, 'impossible': 0}
         for ans, data, status in zip(env.ans, env.data, env.status):

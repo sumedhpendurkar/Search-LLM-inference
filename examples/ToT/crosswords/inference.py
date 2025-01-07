@@ -17,7 +17,7 @@ from utils import MiniCrosswordsEnv
 def tot_crosswords(base_model: LanguageModel,
               search_algo: Type[SearchAlgorithm] = CW_DFS,
               resume: int = 0,
-              n_eval: int = 8,
+              n_eval: int = 3,
               depth: int = 10,
               batch_size: int = 2,
               max_per_state: int = 3,
