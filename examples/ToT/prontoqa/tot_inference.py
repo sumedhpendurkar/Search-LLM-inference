@@ -186,7 +186,7 @@ def main(
             torch.distributed.barrier()
         # to make sure the plan is saved before evaluation in multi-process setting
         try:
-            answer = "\n".join(algo_output.terminal_node.state[2::2])
+            answer = "\n".join(algo_output.terminal_nodes[0].state[2::2])
             answer = answer.replace("So ", "")
             return answer
 
