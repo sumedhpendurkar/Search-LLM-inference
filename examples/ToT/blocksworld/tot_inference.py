@@ -289,6 +289,9 @@ if __name__ == '__main__':
             #model = OpenAIModel(model='gpt-4o-mini', temperature=temperature, max_tokens=2048 )
             model = OpenAIModel(model='gpt-3.5-turbo', temperature=temperature, max_tokens=2048 )
             #####################################
+        elif base_lm == 'hf':
+            from reasoners.lm import HFModel
+            model = HFModel(model_dir, model_dir) 
         else:
             from reasoners.lm import ExLlamaModel  # Maybe other transformer models also support
             device = torch.device("cuda:0")

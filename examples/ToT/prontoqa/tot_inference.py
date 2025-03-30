@@ -186,7 +186,7 @@ def main(
             torch.distributed.barrier()
         # to make sure the plan is saved before evaluation in multi-process setting
         try:
-            answer = "\n".join(algo_output.terminal_node.state[2::2])
+            answer = "\n".join(algo_output.terminal_nodes[0].state[2::2])
             answer = answer.replace("So ", "")
             return answer
 
@@ -207,6 +207,9 @@ def main(
     elif base_lm == 'llama3' or base_lm == "llama3.2":
         from reasoners.lm import Llama3Model
         model = Llama3Model(model_dir, llama_size, max_batch_size=batch_size)
+    elif base_lm == 'hf':
+        from reasoners.lm import HFModel
+        model = HFModel(model_dir, model_dir)
     elif base_lm == 'openai':
         from reasoners.lm import OpenAIModel
         model = OpenAIModel(model='gpt-3.5-turbo', temperature=temperature, max_tokens=2048 )
