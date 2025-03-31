@@ -291,7 +291,7 @@ if __name__ == '__main__':
             #####################################
         elif base_lm == 'hf':
             from reasoners.lm import HFModel
-            model = HFModel(model_dir, model_dir) 
+            model = HFModel(model_dir, model_dir, max_batch_size=batch_size)
         else:
             from reasoners.lm import ExLlamaModel  # Maybe other transformer models also support
             device = torch.device("cuda:0")

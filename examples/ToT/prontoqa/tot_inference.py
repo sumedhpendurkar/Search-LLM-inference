@@ -209,7 +209,7 @@ def main(
         model = Llama3Model(model_dir, llama_size, max_batch_size=batch_size)
     elif base_lm == 'hf':
         from reasoners.lm import HFModel
-        model = HFModel(model_dir, model_dir)
+        model = HFModel(model_dir, model_dir, max_batch_size=batch_size)
     elif base_lm == 'openai':
         from reasoners.lm import OpenAIModel
         model = OpenAIModel(model='gpt-3.5-turbo', temperature=temperature, max_tokens=2048 )
