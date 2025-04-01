@@ -233,9 +233,41 @@ class HFModel(LanguageModel):
         for case_logits, cand in zip(all_logits, cand_tokens):
             logits.append(case_logits[cand].cpu().numpy())
         return logits
-    
+
     @torch.no_grad()
     def get_loglikelihood(self, prefix: str, contents: list[str], **kwargs) -> np.ndarray:
+        bsz = len(contents)
+        if  bsz <= self.max_batch_size:
+            return self.get_loglikelihood_batch(prefix, contents)
+        
+        logprobs = []
+        for text in contents:
+
+            prompts_tokens = self.tokenizer([text], return_tensors='pt',add_special_tokens=False, padding=True).to(self.device)
+            prefix_tokens = self.tokenizer(prefix, return_tensors='pt',add_special_tokens=False, padding=True).input_ids[0].to(self.device)
+            
+            for prompt_tokens in prompts_tokens.input_ids:
+                assert torch.all(prompt_tokens[: len(prefix_tokens)] == prefix_tokens), (prompt_tokens, prefix_tokens)
+
+            tokens = prompts_tokens
+            logits = self.model(**tokens, return_dict=True).logits
+            tokens = prompts_tokens.input_ids
+            acc_probs = 0
+            for i in range(len(prefix_tokens), tokens.shape[1]):
+                probs = torch.softmax(logits[:, i-1, :], dim=-1)
+                if tokens[0, i] != self.tokenizer.pad_token_id:
+                    acc_probs += torch.log(probs[0, tokens[0, i]])
+            logprobs.append(acc_probs.cpu().numpy())
+              
+        return np.array(logprobs)
+
+    
+    @torch.no_grad()
+    def get_loglikelihood_batch(self, prefix: str, contents: list[str], **kwargs) -> np.ndarray:
+        """
+        Batch Inference
+        TODO: Solve if assertion fails
+        """
         bsz = len(contents)
         assert bsz <= self.max_batch_size, (bsz, self.max_batch_size)
         prompts_tokens = self.tokenizer(contents, return_tensors='pt',add_special_tokens=False, padding=True).to(self.device)
