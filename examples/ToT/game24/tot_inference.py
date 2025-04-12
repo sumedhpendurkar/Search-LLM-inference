@@ -158,8 +158,7 @@ if __name__ == '__main__':
             base_model = Llama3Model(llama_3_ckpts, llama_size, max_batch_size=batch_size)
         elif base_lm == 'hf':
             from reasoners.lm import HFModel
-            base_model = HFModel(hf_path, hf_path, max_batch_size=batch_size, max_new_tokens=512,
-                                 peft_pth=hf_peft_path, quantized=hf_quantized, load_awq_pth=hf_load_awq_path)
+            model = HFModel(model_dir, model_dir, max_batch_size=batch_size)
         elif base_lm == 'openai':
             from reasoners.lm import OpenAIModel
             base_model = OpenAIModel(model='gpt-3.5-turbo', temperature=temperature, max_tokens=2048 )
