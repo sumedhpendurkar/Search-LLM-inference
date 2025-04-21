@@ -86,11 +86,11 @@ class BWConfig(SearchConfig):
         ouputs = self.base_model.generate([prompts],
                                           num_return_sequences=self.n_candidate,
                                           #max_length=20,
-                                          eos_token_id=["\n[", "\n", ],
+                                          eos_token_id=["\n", ],
                                           temperature=self.temperature,
                                           do_sample=True,
                                           hide_input=True).text
-        
+       
         outputs = [output.split("\n")[0] for output in ouputs]
         # deduplicate
         outputs = list(dict.fromkeys(outputs))
@@ -112,7 +112,6 @@ class BWConfig(SearchConfig):
                         [inputs + action for action in actions], temperature=temperature)
         
         probs = np.exp(log_probs)
-        print(actions)
         print(probs)
         return probs
 
