@@ -7,6 +7,7 @@ datasets
 pandas
 bs4
 gym
+pddl==0.2.0
 # hf
 transformers
 # llama
