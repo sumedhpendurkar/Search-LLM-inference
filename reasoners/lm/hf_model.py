@@ -235,7 +235,8 @@ class HFModel(LanguageModel):
         return logits
 
     @torch.no_grad()
-    def get_loglikelihood(self, prefix: str, contents: list[str], **kwargs) -> np.ndarray:
+    def get_loglikelihood(self, prefix: str, contents: list[str], 
+                          temperature=1, **kwargs) -> np.ndarray:
         bsz = len(contents)
         if  bsz <= self.max_batch_size:
             return self.get_loglikelihood_batch(prefix, contents)
@@ -254,7 +255,7 @@ class HFModel(LanguageModel):
             tokens = prompts_tokens.input_ids
             acc_probs = 0
             for i in range(len(prefix_tokens), tokens.shape[1]):
-                probs = torch.softmax(logits[:, i-1, :], dim=-1)
+                probs = torch.softmax(logits[:, i-1, :] / temperature, dim=-1)
                 if tokens[0, i] != self.tokenizer.pad_token_id:
                     acc_probs += torch.log(probs[0, tokens[0, i]])
             logprobs.append(acc_probs.cpu().numpy())
