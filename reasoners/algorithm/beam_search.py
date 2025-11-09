@@ -5,6 +5,7 @@ from typing import NamedTuple, List, Tuple, Callable, Any, Union, Optional
 import numpy as np
 import warnings
 import random
+import time
 from copy import deepcopy
 import itertools
 
@@ -58,7 +59,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
                  temperature_decay: Optional[float] = None, reject_sample: Optional[bool] = None,
                  reject_min_reward: Optional[float] = None, unbiased: Optional[bool] = None,
                  reward_aggregator: Union[Callable[[List[Any]], float], str] = 'last', 
-                 action_dedup: bool = False, max_per_state: int = 3,
+                 action_dedup: bool = False, max_per_state: int = 3, max_time:int = 1000000,
                  early_terminate: bool = True, return_beam: bool = False, total_calls:int = 100, **kwargs) -> None:
         # Initialize the BeamSearch class
         super().__init__(**kwargs)
@@ -78,6 +79,8 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
         self.total_calls = total_calls
         self.call_cnt = 0
         self.anytime = True
+        self.max_time = max_time
+        self.time = 0
         self.max_per_state = max_per_state 
 
         # Initializing the reward_aggregator based on the provided argument
@@ -209,6 +212,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
         # Initialize current beam with initial state
         cur_beam = [(root_node, [], 0.0)]  # (node, reward_list, cum_reward)
         self.call_cnt = 0
+        self.time = 0
         terminal_beam = []
 
         for depth in range(self.max_depth + 1):
@@ -216,14 +220,14 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
             new_beam = []
             cache_for_dedup = set()
 
-            if self.call_cnt == self.total_calls:
+            if self.call_cnt == self.total_calls or self.time >= self.max_time:
                 break
 
             if len(terminal_beam) > 0 and not self.anytime:
                 break
 
             for beam_item in cur_beam:
-                if self.call_cnt == self.total_calls:
+                if self.call_cnt == self.total_calls or self.time >= self.max_time:
                     break
                 if len(terminal_beam) > 0 and not self.anytime:
                     break
@@ -245,7 +249,9 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
                         actions = [a for a in actions if a not in cache_for_dedup]
                         cache_for_dedup.update(actions)
 
+                    start = time.time()
                     actions = config.get_actions(state)[:self.max_per_state]
+                    self.time += time.time() - start
                     if self.unbiased and self.sampling_strategy == 'stochastic':
                         max_num_actions = min(len(actions), self.total_calls - self.call_cnt)
                     else:
@@ -256,7 +262,9 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
 
                     for action in actions:
                         next_state, aux = world.step(state, action)
-
+                        
+                        if self.time >= self.max_time:
+                            break
                         if self.unbiased and self.sampling_strategy == 'stochastic':
                             # the action should have action.action_prob
                             try:
@@ -271,8 +279,10 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
                                                    is the accumulated action probability, and \
                                                    'cur_action_prob', which is the current action probability.")
                         else:
+                            start = time.time()
                             fast_reward, fast_reward_aux = config.fast_reward(state, action)
                             reward = config.reward(state, action, **aux, **fast_reward_aux)
+                            self.time += time.time() - start 
                             self.call_cnt += 1
 
                             # if the reward is a tuple, then it is (reward, aux)
