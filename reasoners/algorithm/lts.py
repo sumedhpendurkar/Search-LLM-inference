@@ -54,11 +54,13 @@ class LTSResult(NamedTuple):
 class LTS(SearchAlgorithm, Generic[State, Action]):
     """ LTS Search Algorithm """
 
-    def __init__(self, total_calls: int=100, max_per_state: int=10, 
+    def __init__(self, total_calls: int=100, max_time: int=100000000,max_per_state: int=10, 
                  lts_temp=0.8, max_terminal_nodes: int=10):
         self.total_calls = total_calls
         self.terminals = []
         self.call_cnt = 0
+        self.max_time = max_time
+        self.time = 0
         self.max_per_state = max_per_state
         self.max_terminal_nodes = max_terminal_nodes ## TODO: Redundant as of now
         self.anytime = False 
@@ -67,6 +69,7 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
     def _reset(self):
         self.terminals = []
         self.call_cnt = 0
+        self.time = 0
 
     def __call__(self, world: WorldModel, config: SearchConfig) -> Optional[LTSResult]:
         # Reset the node IDs
@@ -92,7 +95,7 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
         # Set to track visited states
         visited = set()
 
-        while open_set and self.call_cnt < self.total_calls:
+        while open_set and self.call_cnt < self.total_calls and self.time < self.max_time:
             # Get the node with the lowest f_cost
             cur_node = heapq.heappop(open_set)
 
@@ -111,7 +114,9 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
             visited.add(cur_node.state)
 
             # Get possible actions from the current state
+            start = time.time()
             new_actions = config.get_actions(cur_node.state)
+            self.time += time.time() - start()
             if not new_actions:
                 continue  # No actions to explore, skip this node
 
