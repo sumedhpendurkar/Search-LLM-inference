@@ -120,6 +120,7 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
             end = time.time() 
             self.time += time.time() - start
             print("Generated Actions. Time: ", self.time, end-start)
+            print("="*100) 
             if self.time >= self.max_time:
                 break
             if not new_actions:

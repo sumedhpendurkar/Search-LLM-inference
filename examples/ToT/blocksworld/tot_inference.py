@@ -14,6 +14,26 @@ from reasoners import WorldModel, LanguageModel, SearchConfig
 from reasoners.benchmark import BWEvaluator
 from reasoners.algorithm import BeamSearch, DFS, LTS
 
+from transformers import StoppingCriteria, StoppingCriteriaList
+import torch
+class StopAtPlanEnd(StoppingCriteria):
+    def __init__(self,tokenizer):
+        self.newline_token_ids = [198, 2595]
+        self.prompt_length = 15 
+        self.tokenizer = tokenizer
+    
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        # Check if the last generated token (after prompt) is a newline
+        for i in range(len(input_ids)): 
+            if input_ids.shape[1] > self.prompt_length:
+                last_token = input_ids[i, -1].item()
+                #print("Token:", last_token, self.tokenizer.decode([last_token])) 
+                #print("**********")
+                if last_token in self.newline_token_ids:
+                    return True
+        return False    
+
+
 def bfs_bw_extractor(algo_output):
     if torch.distributed.is_initialized():
         torch.distributed.barrier()
@@ -83,14 +103,18 @@ class BWConfig(SearchConfig):
         prompts = self.prompt["icl"].replace("<action>", "\n".join(state.action_history + [""])) \
             .replace("<init_state>", utils.extract_init_state(self.example)) \
             .replace("<goals>", utils.extract_goals(self.example, return_raw=True))
+        import time 
+        start = time.time()
         ouputs = self.base_model.generate([prompts],
                                           num_return_sequences=self.n_candidate,
                                           #max_length=20,
+                                          stopping_criteria=StopAtPlanEnd,
                                           eos_token_id=["\n", ],
                                           temperature=self.temperature,
                                           do_sample=True,
                                           hide_input=True).text
-       
+        print("model generate time:", time.time() - start)
+        print("ouputs:", len(ouputs), ouputs)
         outputs = [output.split("\n")[0] for output in ouputs]
         # deduplicate
         outputs = list(dict.fromkeys(outputs))

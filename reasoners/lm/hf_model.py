@@ -1,4 +1,4 @@
-from typing import Union, Optional
+from typing import Union, Optional, Any
 import warnings
 import copy
 
@@ -8,7 +8,7 @@ from peft import PeftModel
 import numpy as np
 # from optimum.bettertransformer import BetterTransformer
 from accelerate import infer_auto_device_map, dispatch_model
-
+from transformers import StoppingCriteria, StoppingCriteriaList
 from .. import LanguageModel,GenerateOutput
 
 
@@ -111,18 +111,23 @@ class HFModel(LanguageModel):
             self,
             inputs: list[str],
             max_length: Optional[int] = None,
-            max_new_tokens: Optional[int] = None,
+            max_new_tokens: Optional[int] = 15,
             do_sample: bool = False,
             temperature: float = 1.0,
             top_k: int = 50,
             top_p: float = 1.0,
             num_return_sequences: int = 1,
+            stopping_criteria:Optional[Any] = None,
             eos_token_id: Union[None, str, int, list[str, int]] = None,
             hide_input: bool = True,
             output_log_probs: bool = False,
             **kwargs,
         ) -> GenerateOutput:
-
+        
+        if stopping_criteria:
+            stopping_criteria = stopping_criteria(self.tokenizer)
+            stopping_criteria_list = StoppingCriteriaList()
+            stopping_criteria_list.append(stopping_criteria)
         # unify eos_token
         if max_length is None:
             max_length = self.max_length  
@@ -136,6 +141,7 @@ class HFModel(LanguageModel):
             do_sample = False
             temperature = 1.0
             top_k = 1 
+
         if eos_token_id_input is not None:
             if not isinstance(eos_token_id_input, list):
                 eos_token_id_input = [eos_token_id_input]
@@ -151,8 +157,11 @@ class HFModel(LanguageModel):
                 else:
                     warnings.warn(f'the eos_token {repr(token)} is neither str nor int, which is ignored')
         eos_token_id.append(self.tokenizer.eos_token_id)
+        # ADD THIS DEBUG CODE:
+        
         generation_config = GenerationConfig(
             max_length=max_length,
+            max_new_tokens = self.max_new_tokens,
             temperature=temperature,
             pad_token_id=self.tokenizer.pad_token_id,
             bos_token_id=self.tokenizer.bos_token_id,
@@ -160,6 +169,7 @@ class HFModel(LanguageModel):
             do_sample = do_sample,
             top_k=top_k,
             top_p=top_p,
+            repetition_penalty=1.8,
         )
         if max_new_tokens is not None:
             generation_config = GenerationConfig(
@@ -172,6 +182,7 @@ class HFModel(LanguageModel):
             do_sample = do_sample,
             top_k=top_k,
             top_p=top_p,
+            #repetition_penalty=1.3,
         )
         
         if num_return_sequences > 1:
@@ -185,10 +196,37 @@ class HFModel(LanguageModel):
             with torch.inference_mode():
                 generation_output = self.model.generate(
                     **encoded_inputs,
+                    stopping_criteria=stopping_criteria_list,
                     generation_config=generation_config,
                     output_scores=output_log_probs,
                     return_dict_in_generate=True,
                 )
+            """
+            # ADD THIS DEBUG BLOCK HERE:
+            print("\n=== GENERATION DEBUG ===")
+            for idx in range(min(2, len(generation_output.sequences))):
+                seq = generation_output.sequences[idx]
+                print(f"\nSequence {idx}:")
+                print(f"  Full token IDs: {seq.tolist()}")
+                print(f"  Sequence length: {len(seq)}")
+                
+                # Check if 198 or 128009 appear
+                if 198 in seq.tolist():
+                    positions = [i for i, x in enumerate(seq.tolist()) if x == 198]
+                    print(f"  ✓ Token 198 (\\n) found at positions: {positions}")
+                    print(f"  Tokens AFTER first newline: {seq[positions[0]+1:].tolist()}")
+                else:
+                    print(f"  ✗ Token 198 (\\n) NOT in sequence")
+                
+                if 128009 in seq.tolist():
+                    positions = [i for i, x in enumerate(seq.tolist()) if x == 128009]
+                    print(f"  ✓ Token 128009 (<|eot_id|>) found at positions: {positions}")
+                else:
+                    print(f"  ✗ Token 128009 (<|eot_id|>) NOT in sequence")
+            print("=== END DEBUG ===\n")
+            """
+     
+
             decoded = self.tokenizer.batch_decode(generation_output.sequences, skip_special_tokens=True)
             if hide_input:
                 for i in range(end-start):
