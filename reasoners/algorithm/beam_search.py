@@ -326,6 +326,7 @@ class BeamSearch(SearchAlgorithm, Generic[State, Action]):
         terminal_beam.sort(key=lambda x: x[2], reverse=True)
 
         print("Beam Search found goal nodes in", self.call_cnt, '/', self.total_calls, "LLM calls\t", "num solutions:", len(terminal_beam))
+        print("Total Time:", self.time) 
         if self.return_beam:
             # convert terminal_beam to a list of BeamSearchResult
             terminal_beam = [BeamSearchResult(

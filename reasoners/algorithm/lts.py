@@ -117,8 +117,9 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
             # Get possible actions from the current state
             start = time.time()
             new_actions = config.get_actions(cur_node.state)
-            self.time += time.time() - start()
-           
+            end = time.time() 
+            self.time += time.time() - start
+            print("Generated Actions. Time: ", self.time, end-start)
             if self.time >= self.max_time:
                 break
             if not new_actions:
@@ -172,6 +173,7 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
 
         #DEBUG
         print("LTS found goal nodes in", self.call_cnt, "LLM calls")
+        print("Total Time:", self.time)
         print("Num Terminals:", len(self.terminals))
         # If terminal states are found, return the best one based on reward 
         if self.terminals:
