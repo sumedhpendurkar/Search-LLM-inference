@@ -117,7 +117,7 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
             # Get possible actions from the current state
             start = time.time()
             new_actions = config.get_actions(cur_node.state)
-            self.time += time.time() - start()
+            self.time += time.time() - start
            
             if self.time >= self.max_time:
                 break
