@@ -192,14 +192,15 @@ class SortToTSearchConfig(SearchConfig[SortState, SortAction, SortExample]):
 
         input_prompt += "Input: " + self.example[0]+ "\nSteps:\n"
         
-        print(f"Input prompt: '{input_prompt}'\n")
-        print("#"*100)
+        #print(f"Input prompt: '{input_prompt}'\n")
+        #print("#"*100)
         
         input_prompt += "".join([" " + s for s in state])
         #eos_token_id=29889
         eos_token_id=["\n"]
         output = self.base_model.generate([input_prompt] * self.n_actions, eos_token_id=eos_token_id, hide_input=True, temperature=self.temperature, do_sample=True).text
-        ret = [o.strip() for o in output]
+        print(output) 
+        ret = [o.split("\n")[0].strip() for o in output]
         #print(f"Input prompt to model.generate: {input_prompt}")
         print(f"Model generated actions: {ret}")
         # deduplicate
@@ -220,7 +221,7 @@ class SortToTSearchConfig(SearchConfig[SortState, SortAction, SortExample]):
         intuition = self.base_model.get_loglikelihood(input_prompt, 
             [candidate])[0]
         
-        return intuition
+        return  (intuition.item(), {'intuition':intuition})  
         
         #print(f" prompt: {self.prompt}")
         #print(f"action: {processed_action}")
@@ -251,8 +252,9 @@ class SortToTSearchConfig(SearchConfig[SortState, SortAction, SortExample]):
     def reward(self, state, action, **kwargs) -> tuple[float, dict]:
         # how correct is this last action
         intuition = kwargs["intuition"]
-        self_eval = kwargs["self_eval"]
-        return intuition*0.5 + self_eval*0.5, {"intuition": intuition, "self_eval":self_eval}
+        #self_eval = kwargs["self_eval"]
+        #return intuition*0.5 + self_eval*0.5, {"intuition": intuition, "self_eval":self_eval}
+        return intuition*0.5, {"intuition": intuition}
     
     def get_pi(self, state, actions, temperature=None):
         """
@@ -370,7 +372,8 @@ def main(
         disable_tqdm=False, 
         dataset = dataset,
         output_extractor=output_extractor,
-        answer_extractor=lambda x: "\n".join(x.test_example.chain_of_thought[2::2])
+        #answer_extractor=lambda x: "\n".join(x.test_example.chain_of_thought[2::2])
+        answer_extractor=lambda x: x[1] 
     )
 
     accuracy = evaluator.evaluate(reasoner, shuffle_prompt=True, num_shot=4, resume=resume, log_dir=log_dir)
