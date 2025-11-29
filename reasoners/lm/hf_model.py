@@ -240,8 +240,6 @@ class HFModel(LanguageModel):
     def get_loglikelihood(self, prefix: str, contents: list[str], 
                           temperature=1, **kwargs) -> np.ndarray:
         bsz = len(contents)
-        if  bsz <= self.max_batch_size:
-            return self.get_loglikelihood_batch(prefix, contents)
         
         logprobs = []
         for text in contents:

@@ -102,8 +102,8 @@ class BWConfig(SearchConfig):
         """
         TODO: log prob to prob conversion
         """
-        temperature = self.temperature if temperature is None else temperature
-
+        temperature = self.temperature if temperature is None else temperature 
+        print("Temperature!!!!!", temperature)
         inputs = self.prompt["icl"].replace("<action>", "\n".join(state.action_history + [""])) \
             .replace("<init_state>", utils.extract_init_state(self.example)) \
             .replace("<goals>", utils.extract_goals(self.example, return_raw=True))
@@ -239,10 +239,10 @@ if __name__ == '__main__':
     from reasoners.lm import LlamaModel, Llama2Model
     from reasoners.lm import OpenAIModel
     from reasoners.lm.llama_model import DummyLLaMAModel
-    np.random.seed(1)
-    random.seed(1)
-    torch.manual_seed(1)
-    torch.cuda.manual_seed(1)
+    np.random.seed(1021)
+    random.seed(121)
+    torch.manual_seed(2131)
+    torch.cuda.manual_seed(9231)
     torch.backends.cudnn.deterministic = True
 
     def main(

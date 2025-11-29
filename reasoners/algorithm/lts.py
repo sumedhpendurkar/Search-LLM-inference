@@ -139,7 +139,22 @@ class LTS(SearchAlgorithm, Generic[State, Action]):
                 new_actions = new_actions[:self.max_per_state]
 
             pis = config.get_pi(cur_node.state, new_actions, self.lts_temp)  #Save computational cost
-             # Explore each action
+            """ 
+            print("=" * 100) 
+            print(config) 
+            pis = config.get_pi(cur_node.state, new_actions, self.lts_temp)  #Save computational cost
+            print("Temperature:", self.lts_temp, "PIs:", pis)
+            pis = config.get_pi(cur_node.state, new_actions, 0.5)  #Save computational cost
+            print("Temperature:",0.5, "PIs:", pis)
+            pis = config.get_pi(cur_node.state, new_actions, 1)  #Save computational cost
+            print("Temperature:", 1, "PIs:", pis)
+            pis = config.get_pi(cur_node.state, new_actions, 1.5)  #Save computational cost
+            print("Temperature:", 1.5, "PIs:", pis)
+            pis = config.get_pi(cur_node.state, new_actions, 2)  #Save computational cost
+            print("Temperature:", 2, "PIs:", pis)
+            print("=" * 100) 
+            """ 
+            # Explore each action
             for itr, action in enumerate(new_actions):
                 # Generate the next state
                 #action, (fast_reward, fast_reward_details) = action
