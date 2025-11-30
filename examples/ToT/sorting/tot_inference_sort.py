@@ -267,9 +267,13 @@ class SortToTSearchConfig(SearchConfig[SortState, SortAction, SortExample]):
         """
         temperature = self.temperature if temperature is None else temperature
         input_prompt = self.prompt
-        input_prompt += "Q: " + self.example.test_example.question + " " + self.example.test_example.query + "\nA:"
-        # print(f"input_prompt: '{input_prompt}'\n")
+        input_prompt += "Input: " + self.example[0]+ "\nSteps:\n"
+        
+        #print(f"Input prompt: '{input_prompt}'\n")
+        #print("#"*100)
+        
         input_prompt += "".join([" " + s for s in state])
+        input_prompt += "\n"
 
         log_probs = self.base_model.get_loglikelihood(input_prompt, 
                         [input_prompt + ' ' + action for action in actions], temperature=temperature)
