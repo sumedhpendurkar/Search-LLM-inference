@@ -159,12 +159,24 @@ class SortEvaluatorFinal(Evaluator):
             raise NotImplementedError
 
     def eval_output(self, answer, output):
+        
+        def compare(output, answer):
+            # Extract content between brackets, handling various formats
+            out_str = output.split("[")[1].split("]")[0]
+            ans_str = answer.strip().strip("[]")
+            
+            # Parse to floats, .strip() handles extra spaces around numbers
+            out = [float(x.strip()) for x in out_str.split(",") if x.strip()]
+            ans = [float(x.strip()) for x in ans_str.split(",") if x.strip()]
+            print("Eval:", out, ans) 
+            return out == ans
+        
         if output is None:
             return False
         try:
             output = str(output)
             answer = str(answer)
-            return output == answer
+            return compare(output, answer)
         except ValueError:
             pass
         try:
@@ -196,10 +208,10 @@ class SortToTSearchConfig(SearchConfig[SortState, SortAction, SortExample]):
         #print("#"*100)
         
         input_prompt += "".join([" " + s for s in state])
+        input_prompt += "\n"
         #eos_token_id=29889
         eos_token_id=["\n"]
         output = self.base_model.generate([input_prompt] * self.n_actions, eos_token_id=eos_token_id, hide_input=True, temperature=self.temperature, do_sample=True).text
-        print(output) 
         ret = [o.split("\n")[0].strip() for o in output]
         #print(f"Input prompt to model.generate: {input_prompt}")
         print(f"Model generated actions: {ret}")
@@ -305,8 +317,9 @@ def main(
             torch.distributed.barrier()
         # to make sure the plan is saved before evaluation in multi-process setting
         try:
-            answer = "\n".join(algo_output.terminal_node.state[2::2])
-            answer = answer.replace("So ", "")
+            #print("Extractor", algo_output.terminal_nodes[0].state)
+            answer = "\n".join(algo_output.terminal_nodes[0].state)
+            #answer = answer.replace("Answer: ", "")
             return answer
 
         except Exception as e:
@@ -343,7 +356,6 @@ def main(
                                 mem_map=mem_map)
 
     world_model = SortToTWorldModel()
-    print(f"##### WE'RE HERE #####")
     search_config = SortToTSearchConfig(base_model=model, prompt = sort_example, temperature=temperature)
     
     output_extractor = extractor
