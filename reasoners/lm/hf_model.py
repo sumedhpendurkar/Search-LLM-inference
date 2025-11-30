@@ -128,6 +128,7 @@ class HFModel(LanguageModel):
             max_length = self.max_length  
         if max_new_tokens is None:
             max_new_tokens = self.max_new_tokens
+        max_new_tokens = 40 
         eos_token_id_input = copy.deepcopy(eos_token_id)
         eos_token_id = []
 
