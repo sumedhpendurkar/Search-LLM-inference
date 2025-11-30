@@ -178,14 +178,7 @@ class SortEvaluatorFinal(Evaluator):
             answer = str(answer)
             return compare(output, answer)
         except ValueError:
-            pass
-        try:
-            output = str(output)
-            answer = str(answer)
             return output == answer
-        except ValueError:
-            pass
-        return output == answer
     
 
 class SortToTSearchConfig(SearchConfig[SortState, SortAction, SortExample]):
@@ -318,7 +311,8 @@ def main(
         # to make sure the plan is saved before evaluation in multi-process setting
         try:
             #print("Extractor", algo_output.terminal_nodes[0].state)
-            answer = "\n".join(algo_output.terminal_nodes[0].state)
+            #print("Extractor", algo_output.terminal_nodes[0].state[-1])
+            answer = algo_output.terminal_nodes[0].state[-1]
             #answer = answer.replace("Answer: ", "")
             return answer
 
