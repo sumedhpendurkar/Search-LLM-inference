@@ -1,4 +1,4 @@
-## Policy-Guided Search on Tree-of-Thoughts for Efficient Problem Solving with Bounded Language Model Queries
+# Policy-Guided Search on Tree-of-Thoughts for Efficient Problem Solving with Bounded Language Model Queries
 
 This repository is the official implementation of <a href="https://openreview.net/forum?id=Rlk1bWe2ii&noteId=Rlk1bWe2ii">Policy-Guided Search on Tree-of-Thoughts for Efficient Problem Solving with Bounded Language Model Queries</a>
 
