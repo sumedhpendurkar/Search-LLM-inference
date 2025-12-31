@@ -23,7 +23,7 @@ Adding `--recursive` will help you clone exllama automatically. Note that some o
 
 ---
 
-If you found our work useful, consider citing us
+If you found our work useful, consider citing our work
 
 ```
 @article{
