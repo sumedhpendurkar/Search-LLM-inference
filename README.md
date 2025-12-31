@@ -1,7 +1,7 @@
 # Policy-Guided Search on Tree-of-Thoughts for Efficient Problem Solving with Bounded Language Model Queries
 
 
-This repository is the official implementation of <a href="https://openreview.net/forum?id=Rlk1bWe2ii&noteId=Rlk1bWe2ii"> Policy-Guided Search on Tree-of-Thoughts for Efficient Problem Solving with Bounded Language Model Queries</a>. This repository is based on  <a href="http://github.com/maitrix-org/llm-reasoners"> LLM Reasoners </a>
+This repository is the official implementation of <a href="https://openreview.net/forum?id=Rlk1bWe2ii&noteId=Rlk1bWe2ii"> Policy-Guided Search on Tree-of-Thoughts for Efficient Problem Solving with Bounded Language Model Queries</a>. This repository is forked from <a href="http://github.com/maitrix-org/llm-reasoners"> LLM Reasoners</a>.
 
 ---
 
