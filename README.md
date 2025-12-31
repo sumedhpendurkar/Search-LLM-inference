@@ -1,8 +1,6 @@
+## Policy-Guided Search on Tree-of-Thoughts for Efficient Problem Solving with Bounded Language Model Queries
 
-<p align="center">
-  [<a href="https://www.llm-reasoners.net/">Home</a>]
-  [<a href="">Paper</a>]
-</p>
+This repository is the official implementation of <a href="https://openreview.net/forum?id=Rlk1bWe2ii&noteId=Rlk1bWe2ii">Policy-Guided Search on Tree-of-Thoughts for Efficient Problem Solving with Bounded Language Model Queries</a>
 
 ---
 
@@ -16,10 +14,27 @@ conda activate reasoners
 
 Clone the repository and install the package:
 ```bash
-git clone https://github.com/Ber666/llm-reasoners --recursive
+git clone https://github.com/sumedhpendurkar/Search-LLM-inference --recursive
 cd llm-reasoners
 pip install -e .
 ```
 Adding `--recursive` will help you clone exllama automatically. Note that some other optional modules may need other dependencies. Please refer to the error message for details.
+
+---
+
+If you found our work useful, consider citing us
+
+```
+@article{
+pendurkar2025policyguided,
+title={Policy-Guided Search on Tree-of-Thoughts for Efficient Problem Solving with Bounded Language Model Queries},
+author={Sumedh Pendurkar and Guni Sharon},
+journal={Transactions on Machine Learning Research},
+issn={2835-8856},
+year={2025},
+url={https://openreview.net/forum?id=Rlk1bWe2ii},
+note={}
+}
+```
 
 
